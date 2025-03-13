@@ -134,8 +134,7 @@ func (c Step) Exec(store TrxStore, pp Params) (result ExecResult) {
 		return result
 	}
 
-	exec, err := store.GetWithLock(c.Trx)
-	defer store.Unlock(c.Trx)
+	exec, err := store.Get(c.Trx)
 	if err != nil {
 		result.Error = err
 

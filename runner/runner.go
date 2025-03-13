@@ -2,7 +2,6 @@ package runner
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/rusinikita/acid/call"
 	"github.com/rusinikita/acid/ui"
 	"time"
@@ -23,7 +22,7 @@ type DBExec interface {
 	Exec(query string, args ...any) (sql.Result, error)
 }
 
-func (r *Runner) Run(sequence call.Sequence, next <-chan struct{}) <-chan ui.Event {
+func (r *Runner) Run(sequence call.Sequence) <-chan ui.Event {
 	results := make(chan ui.Event)
 
 	go func() {
@@ -38,28 +37,12 @@ func (r *Runner) Run(sequence call.Sequence, next <-chan struct{}) <-chan ui.Eve
 }
 
 func (r *Runner) RunSQL(step call.Step, events chan ui.Event) {
-	fmt.Println("step", step.Trx, step.Code)
-
-	events <- ui.Call(step)
+	events <- ui.Call(step, r.store.Running())
 
 	go func() {
 		result := step.Exec(r.store, nil)
 
-		events <- ui.Result(step, result)
-		//if result.Error != nil {
-		//	fmt.Println("error:", result.Error)
-		//	return
-		//}
-		//
-		//if result.Rows == nil {
-		//	fmt.Println("rows affected:", result.RowsAffected)
-		//	return
-		//}
-		//
-		//fmt.Println("columns:", result.Rows.Columns)
-		//for i, row := range result.Rows.Rows {
-		//	fmt.Println("row:", i, row)
-		//}
+		events <- ui.Result(step, result, r.store.Running())
 	}()
 
 	time.Sleep(200 * time.Millisecond)
