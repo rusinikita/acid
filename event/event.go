@@ -1,4 +1,4 @@
-package ui
+package event
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 )
 
 type Event struct {
+	title   bool
 	trx     call.TrxID
 	step    *call.Step
 	result  *call.ExecResult
