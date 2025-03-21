@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -16,16 +15,14 @@ import (
 func Connect() *sql.DB {
 	// Load .env file from the root directory
 	if err := godotenv.Load(".env"); err != nil {
-		log.Println(".env not found")
+		//log.Println(".env not found")
 	}
 	if err := godotenv.Load("../.env"); err != nil {
-		log.Println("../.env not found")
+		//log.Println("../.env not found")
 	}
 	if err := godotenv.Load("../../.env"); err != nil {
-		log.Println("../../.env not found")
+		//log.Println("../../.env not found")
 	}
-
-	fmt.Println(sql.Drivers())
 
 	db, err := sql.Open(os.Getenv("DB_DRIVER"), os.Getenv("DB_CONNECT"))
 	if err != nil {

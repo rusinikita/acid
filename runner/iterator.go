@@ -11,6 +11,14 @@ type StepIterator struct {
 	results  <-chan event.Event
 }
 
+func NewIterator(r *Runner, s call.Sequence) *StepIterator {
+	return &StepIterator{
+		runner:   r,
+		sequence: s,
+		results:  make(chan event.Event),
+	}
+}
+
 func (i *StepIterator) Run() {
 	i.results = i.runner.Run(i.sequence)
 }
