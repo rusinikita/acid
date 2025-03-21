@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"database/sql"
 	"github.com/joho/godotenv"
 
+	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 )
 
@@ -23,9 +25,16 @@ func Connect() *sql.DB {
 		log.Println("../../.env not found")
 	}
 
+	fmt.Println(sql.Drivers())
+
 	db, err := sql.Open(os.Getenv("DB_DRIVER"), os.Getenv("DB_CONNECT"))
 	if err != nil {
 		log.Fatalf("Failed to Connect to database: %v", err)
+	}
+
+	err = db.Ping()
+	if err != nil {
+		log.Fatalf("Failed to Ping to database: %v", err)
 	}
 
 	// Set connection pool settings

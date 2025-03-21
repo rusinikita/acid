@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/rusinikita/acid/call"
+	"github.com/rusinikita/acid/db"
 	"github.com/rusinikita/acid/runner"
-	"github.com/rusinikita/system-design-trainer/tooling/db"
 	"strconv"
 	"strings"
 	"time"
@@ -33,7 +33,7 @@ design
 	step n				| [tx 2]
 	step n				| Select * from bla bla
 	step n				| --------
-	step n				| [/] Waiting response
+	step n				| [/] Running response
 	step n				|
 	step n				|
 ---------------------------------------------
@@ -97,7 +97,10 @@ func main() {
 		}
 	}()
 
-	runner.New(db.Conn()).Run(sequence, next)
+	c := runner.New(db.Connect()).Run(sequence)
+	for event := range c {
+		fmt.Println(event.View())
+	}
 
 	//p := tea.NewProgram(
 	//	model{},

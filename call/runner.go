@@ -6,9 +6,8 @@ import (
 
 type TrxStore interface {
 	Do(id TrxID, command TrxCommandType) error
-	GetWithLock(id TrxID) (DBExec, error)
-	Unlock(id TrxID)
-	Locked() []TrxID
+	Get(id TrxID) (DBExec, error)
+	Running() []TrxID
 }
 
 type DBExec interface {
