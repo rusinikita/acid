@@ -56,6 +56,19 @@ const (
 	TrxRollback
 )
 
+func (t TrxCommandType) String() string {
+	switch t {
+	case TrxBegin:
+		return "BEGIN"
+	case TrxCommit:
+		return "COMMIT"
+	case TrxRollback:
+		return "ROLLBACK"
+	default:
+		return "no transaction command"
+	}
+}
+
 type ExecResult struct {
 	Rows         *SelectResult
 	RowsAffected int64
