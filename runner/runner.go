@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"github.com/rusinikita/acid/call"
 	"github.com/rusinikita/acid/event"
+	"github.com/rusinikita/acid/sequence"
 	"time"
 )
 
@@ -22,7 +23,7 @@ type DBExec interface {
 	Exec(query string, args ...any) (sql.Result, error)
 }
 
-func (r *Runner) Run(sequence call.Sequence) <-chan event.Event {
+func (r *Runner) Run(sequence sequence.Sequence) <-chan event.Event {
 	results := make(chan event.Event)
 
 	go func() {

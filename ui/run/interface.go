@@ -1,4 +1,4 @@
-package ui
+package run
 
 import "github.com/rusinikita/acid/event"
 

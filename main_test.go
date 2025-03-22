@@ -4,7 +4,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/rusinikita/acid/db"
 	"github.com/rusinikita/acid/runner"
-	"github.com/rusinikita/acid/ui"
+	"github.com/rusinikita/acid/ui/run"
 	"testing"
 )
 
@@ -12,10 +12,10 @@ func TestName(t *testing.T) {
 	conn := db.Connect()
 
 	r := runner.New(conn)
-	i := runner.NewIterator(r, sequence)
+	i := runner.NewIterator(r, mainSequence)
 
 	var (
-		model tea.Model = ui.NewRunTable(i)
+		model tea.Model = run.NewRunTable(i)
 		cmd             = model.Init()
 	)
 

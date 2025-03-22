@@ -5,10 +5,6 @@ import (
 	"strings"
 )
 
-type Sequence struct {
-	Calls []Step
-}
-
 type Params map[string]any
 
 func (p Params) CallParams(call Step) (sql string, args []any, err error) {

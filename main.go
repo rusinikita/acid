@@ -2,40 +2,32 @@ package main
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/rusinikita/acid/call"
 	"github.com/rusinikita/acid/db"
 	"github.com/rusinikita/acid/runner"
-	"github.com/rusinikita/acid/ui"
+	"github.com/rusinikita/acid/sequence"
+	"github.com/rusinikita/acid/ui/router"
+	"github.com/rusinikita/acid/ui/run"
 	"log"
 )
 
 var (
-	tx1 = call.TrxID("first")
-	tx2 = call.TrxID("second")
-
-	sequence = call.Sequence{Calls: []call.Step{
-		call.Call("CREATE TABLE IF NOT EXISTS exec_test (id SERIAL PRIMARY KEY, name TEXT)"),
-		call.Call("TRUNCATE TABLE exec_test"),
-		call.Begin(tx1),
-		call.Begin(tx2),
-		call.Call("insert into exec_test (name) values ('biba')", tx1),
-		call.Call("select * from exec_test", tx2),
-		call.Commit(tx1),
-		call.Call("select * from exec_test", tx2),
-		call.Call("select * from exec_test"),
-	}}
+	mainSequence = sequence.Sequences[0]
 )
 
 func main() {
 	conn := db.Connect()
 
 	r := runner.New(conn)
-	i := runner.NewIterator(r, sequence)
+	i := runner.NewIterator(r, mainSequence)
 
-	model := ui.NewRunTable(i)
+	routes := map[string]tea.Model{
+		"run": run.NewRunTable(i),
+	}
+
+	app := router.NewRouter(routes, router.Route{Model: "run"})
 
 	p := tea.NewProgram(
-		model,
+		app,
 		tea.WithAltScreen(),       // use the full size of the terminal in its "alternate screen buffer"
 		tea.WithMouseCellMotion(), // turn on mouse support so we can track the mouse wheel
 	)

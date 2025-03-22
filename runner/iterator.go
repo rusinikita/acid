@@ -1,17 +1,17 @@
 package runner
 
 import (
-	"github.com/rusinikita/acid/call"
 	"github.com/rusinikita/acid/event"
+	"github.com/rusinikita/acid/sequence"
 )
 
 type StepIterator struct {
 	runner   *Runner
-	sequence call.Sequence
+	sequence sequence.Sequence
 	results  <-chan event.Event
 }
 
-func NewIterator(r *Runner, s call.Sequence) *StepIterator {
+func NewIterator(r *Runner, s sequence.Sequence) *StepIterator {
 	return &StepIterator{
 		runner:   r,
 		sequence: s,
