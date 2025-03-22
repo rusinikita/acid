@@ -14,8 +14,9 @@ type Router struct {
 
 func NewRouter(m map[string]tea.Model, startRoute Route) *Router {
 	return &Router{
-		models:     m,
-		startRoute: startRoute,
+		models:       m,
+		startRoute:   startRoute,
+		currentModel: nil,
 	}
 }
 
@@ -38,9 +39,12 @@ func (r *Router) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		r.currentRoute = msg
 		r.currentModel = r.models[msg.Model]
-		cmd := r.currentModel.Init()
+		cmds := []tea.Cmd{r.currentModel.Init(), returnMsg(msg)}
+		if r.window.Height != 0 {
+			cmds = append(cmds, returnMsg(r.window))
+		}
 
-		return r.models[msg.Model], tea.Sequence(cmd, returnMsg(msg), returnMsg(r.window))
+		return r, tea.Sequence(cmds...)
 	}
 
 	if r.currentModel == nil {
