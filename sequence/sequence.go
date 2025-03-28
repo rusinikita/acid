@@ -3,7 +3,8 @@ package sequence
 import "github.com/rusinikita/acid/call"
 
 type Sequence struct {
-	Calls         []call.Step
+	Name          string
 	Description   string
+	Calls         []call.Step
 	LearningLinks []string
 }

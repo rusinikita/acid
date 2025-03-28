@@ -4,6 +4,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/rusinikita/acid/db"
 	"github.com/rusinikita/acid/runner"
+	"github.com/rusinikita/acid/ui/router"
 	"github.com/rusinikita/acid/ui/run"
 	"testing"
 )
@@ -12,7 +13,7 @@ func TestName(t *testing.T) {
 	conn := db.Connect()
 
 	r := runner.New(conn)
-	i := runner.NewIterator(r, mainSequence)
+	i := runner.NewIterator(r)
 
 	var (
 		model tea.Model = run.NewRunTable(i)
@@ -20,6 +21,7 @@ func TestName(t *testing.T) {
 	)
 
 	model, _ = model.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
+	model, _ = model.Update(router.Message{DataInt: 0})
 
 	for {
 		msg := cmd()

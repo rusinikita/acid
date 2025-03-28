@@ -1,8 +1,11 @@
 package run
 
-import "github.com/rusinikita/acid/event"
+import (
+	"github.com/rusinikita/acid/event"
+	"github.com/rusinikita/acid/sequence"
+)
 
 type runner interface {
-	Run()
+	Run(s sequence.Sequence)
 	Next() (event.Event, bool)
 }

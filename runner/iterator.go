@@ -6,21 +6,19 @@ import (
 )
 
 type StepIterator struct {
-	runner   *Runner
-	sequence sequence.Sequence
-	results  <-chan event.Event
+	runner  *Runner
+	results <-chan event.Event
 }
 
-func NewIterator(r *Runner, s sequence.Sequence) *StepIterator {
+func NewIterator(r *Runner) *StepIterator {
 	return &StepIterator{
-		runner:   r,
-		sequence: s,
-		results:  make(chan event.Event),
+		runner:  r,
+		results: make(chan event.Event),
 	}
 }
 
-func (i *StepIterator) Run() {
-	i.results = i.runner.Run(i.sequence)
+func (i *StepIterator) Run(s sequence.Sequence) {
+	i.results = i.runner.Run(s)
 }
 
 func (i *StepIterator) Next() (event.Event, bool) {

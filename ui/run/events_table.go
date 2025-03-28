@@ -6,6 +6,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
 	"github.com/rusinikita/acid/event"
+	"github.com/rusinikita/acid/sequence"
+	"github.com/rusinikita/acid/ui/router"
 	"github.com/rusinikita/acid/ui/theme"
 )
 
@@ -47,9 +49,7 @@ func NewRunTable(runner runner) tea.Model {
 }
 
 func (m *model) Init() tea.Cmd {
-	m.runner.Run()
-
-	return readNextEvent(m.runner)
+	return nil
 }
 
 func readNextEvent(r runner) func() tea.Msg {
@@ -79,7 +79,10 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.window = msg
 
 		m.UpdateViewport()
+	case router.Message:
+		m.runner.Run(sequence.Sequences[msg.DataInt])
 
+		return m, readNextEvent(m.runner)
 	case newEvent:
 		m.running = msg.WaitingMore
 		if !m.running {

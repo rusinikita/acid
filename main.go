@@ -5,6 +5,7 @@ import (
 	"github.com/rusinikita/acid/db"
 	"github.com/rusinikita/acid/runner"
 	"github.com/rusinikita/acid/sequence"
+	"github.com/rusinikita/acid/ui/list"
 	"github.com/rusinikita/acid/ui/router"
 	"github.com/rusinikita/acid/ui/run"
 	"log"
@@ -18,13 +19,14 @@ func main() {
 	conn := db.Connect()
 
 	r := runner.New(conn)
-	i := runner.NewIterator(r, mainSequence)
+	i := runner.NewIterator(r)
 
 	routes := map[string]tea.Model{
-		"run": run.NewRunTable(i),
+		"run":  run.NewRunTable(i),
+		"list": list.New(),
 	}
 
-	app := router.NewRouter(routes, router.Route{Model: "run"})
+	app := router.NewRouter(routes, router.Route("list"))
 
 	p := tea.NewProgram(
 		app,
