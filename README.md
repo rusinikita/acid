@@ -1,6 +1,12 @@
 # acid
 SQL interview questions learning tool
 
+### Select call sequence example
+
+![](docs/select_screenshot.png)
+
+### Run parallel transactions
+
 ![](docs/tx_screeshot.png)
 
 # Usage
