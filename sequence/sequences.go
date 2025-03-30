@@ -44,7 +44,7 @@ var Sequences = []Sequence{
 	},
 	{
 		Name:        "Dirty Write",
-		Description: "Demonstrates a dirty write scenario where one transaction overwrites uncommitted changes of another transaction across two related tables",
+		Description: "Demonstrates a dirty write scenario where two concurrent transactions update the same record without proper isolation, leading to lost updates.",
 		Calls: []call.Step{
 			call.Call("drop table if exists cars"),
 			call.Call("drop table if exists invoices"),
