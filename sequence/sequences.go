@@ -54,10 +54,12 @@ var Sequences = []Sequence{
 			call.Call("insert into invoices (id, car_id, amount, buyer) values (1, 1, 80000, 'A')"),
 			call.Begin(tx1),
 			call.Begin(tx2),
-			call.Call("update cars set buyer = 'X' where id = 1", tx1),                 // tx1 updates the buyer in cars
-			call.Call("update invoices set car_id = 1, buyer = 'Y' where id = 1", tx2), // tx2 updates car_id and buyer in invoices
-			call.Commit(tx2), // tx2 commits first, overwriting tx1's uncommitted changes
+			call.Call("update cars set buyer = 'X' where id = 1", tx1),
+			call.Call("update cars set buyer = 'Y' where id = 1", tx2),
+			call.Call("update invoices set buyer = 'Y' where car_id = 1", tx2),
+			call.Call("update invoices set buyer = 'X' where car_id = 1", tx1),
 			call.Commit(tx1),
+			call.Commit(tx2),
 			call.Call("select * from cars"),
 			call.Call("select * from invoices"),
 		},
