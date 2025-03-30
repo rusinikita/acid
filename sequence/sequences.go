@@ -42,4 +42,24 @@ var Sequences = []Sequence{
 		},
 		LearningLinks: nil,
 	},
+	{
+		Name:        "Dirty Write",
+		Description: "Demonstrates a dirty write scenario where one transaction overwrites uncommitted changes of another transaction across two related tables",
+		Calls: []call.Step{
+			call.Call("drop table if exists cars"),
+			call.Call("drop table if exists invoices"),
+			call.Call("CREATE TABLE cars (id INTEGER PRIMARY KEY, model TEXT, price INTEGER, buyer TEXT)"),
+			call.Call("CREATE TABLE invoices (id INTEGER PRIMARY KEY, car_id INTEGER, amount INTEGER, buyer TEXT)"),
+			call.Call("insert into cars (id, model, price, buyer) values (1, 'Tesla Model S', 80000, 'A')"),
+			call.Call("insert into invoices (id, car_id, amount, buyer) values (1, 1, 80000, 'A')"),
+			call.Begin(tx1),
+			call.Begin(tx2),
+			call.Call("update cars set buyer = 'X' where id = 1", tx1),                 // tx1 updates the buyer in cars
+			call.Call("update invoices set car_id = 1, buyer = 'Y' where id = 1", tx2), // tx2 updates car_id and buyer in invoices
+			call.Commit(tx2), // tx2 commits first, overwriting tx1's uncommitted changes
+			call.Commit(tx1),
+			call.Call("select * from cars"),
+			call.Call("select * from invoices"),
+		},
+	},
 }
