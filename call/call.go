@@ -81,7 +81,6 @@ func Select(exec DBExec, sql string, args []any) (*SelectResult, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	defer rows.Close()
 
 	columns, err := rows.Columns()
@@ -90,26 +89,32 @@ func Select(exec DBExec, sql string, args []any) (*SelectResult, error) {
 	}
 
 	resultRows := make([][]string, 0)
+	columnCount := len(columns)
+
+	// Create slices once outside the loop for efficiency
+	values := make([]string, columnCount)
+	scanArgs := make([]any, columnCount)
+	for i := range scanArgs {
+		scanArgs[i] = &values[i]
+	}
 
 	for rows.Next() {
-		row := make([]string, len(columns))
-		values := make([]any, len(columns))
-		dest := make([]any, len(columns))
-
-		for i := range dest {
-			dest[i] = &values[i]
-		}
-
-		err := rows.Scan(dest...)
-		if err != nil {
+		if err := rows.Scan(scanArgs...); err != nil {
 			return nil, err
 		}
 
+		// Create a new row for each iteration
+		row := make([]string, columnCount)
 		for i := range row {
-			row[i] = fmt.Sprint(values[i])
+			row[i] = values[i]
 		}
 
 		resultRows = append(resultRows, row)
+	}
+
+	// Check for errors after iteration
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return &SelectResult{
