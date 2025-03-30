@@ -44,7 +44,7 @@ var Sequences = []Sequence{
 	},
 	{
 		Name:        "Lost update",
-		Description: "Demonstrates a dirty write scenario where two concurrent transactions update the same record without proper isolation, leading to lost updates.",
+		Description: "Demonstrates a lost update scenario where one transaction overwrites changes of another transaction across two related tables",
 		Calls: []call.Step{
 			call.Call("drop table if exists cars"),
 			call.Call("drop table if exists invoices"),
