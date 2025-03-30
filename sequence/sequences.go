@@ -43,7 +43,7 @@ var Sequences = []Sequence{
 		LearningLinks: nil,
 	},
 	{
-		Name:        "Dirty Write",
+		Name:        "Lost update",
 		Description: "Demonstrates a dirty write scenario where two concurrent transactions update the same record without proper isolation, leading to lost updates.",
 		Calls: []call.Step{
 			call.Call("drop table if exists cars"),
