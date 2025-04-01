@@ -1,0 +1,2 @@
+- [ ] Add mysql/postgres key word in help row to know current database type
+- [ ] Add hide/show responses for better learning

@@ -27,6 +27,8 @@ func (r *Runner) Run(sequence sequence.Sequence) <-chan event.Event {
 	results := make(chan event.Event)
 
 	go func() {
+		r.store.ResetAll()
+
 		for i, step := range sequence.Calls {
 			r.RunSQL(step, results, i == len(sequence.Calls)-1)
 		}
