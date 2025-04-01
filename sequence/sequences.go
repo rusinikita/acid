@@ -89,4 +89,24 @@ var Sequences = []Sequence{
 		},
 		LearningLinks: nil,
 	},
+	{
+		Name:        "Dirty Read",
+		Description: "Demonstrates dirty read scenario where one transaction reads uncommitted changes made by another transaction",
+		Calls: []call.Step{
+			call.Call("drop table if exists users"),
+			call.Call("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)"),
+			call.Call("insert into users (id, name, age) values (1, 'Alice', 20)"),
+			call.Begin(tx1),
+			call.Call("select age from users where id = 1", tx1),
+			call.Begin(tx2),
+			call.Call("update users set age = 21 where id = 1", tx2),
+			call.Call("select age from users where id = 1", tx1),
+			call.Commit(tx1),
+			call.Rollback(tx2),
+			call.Call("select * from users"),
+		},
+		LearningLinks: []string{
+			"https://en.wikipedia.org/wiki/Isolation_(database_systems)#Dirty_reads",
+		},
+	},
 }
