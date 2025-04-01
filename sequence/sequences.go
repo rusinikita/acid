@@ -89,4 +89,24 @@ var Sequences = []Sequence{
 		},
 		LearningLinks: nil,
 	},
+	{
+		Name:        "Phantom Reads",
+		Description: "Demonstrates phantom reads where transaction sees different results for the same query due to another transaction inserting new rows",
+		Calls: []call.Step{
+			call.Call("drop table if exists users"),
+			call.Call("CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT, age INT)"),
+			call.Call("insert into users (name, age) values ('Alice', 18)"),
+			call.Call("insert into users (name, age) values ('Bob', 20)"),
+			call.Begin(tx1),
+			call.Call("select name from users where age > 17", tx1),
+			call.Begin(tx2),
+			call.Call("insert into users (name, age) values ('Carol', 26)", tx2),
+			call.Commit(tx2),
+			call.Call("select name from users where age > 17", tx1),
+			call.Commit(tx1),
+		},
+		LearningLinks: []string{
+			"https://en.wikipedia.org/wiki/Isolation_(database_systems)#Phantom_reads",
+		},
+	},
 }
