@@ -94,7 +94,7 @@ var Sequences = []Sequence{
 		Description: "Demonstrates phantom reads where transaction sees different results for the same query due to another transaction inserting new rows",
 		Calls: []call.Step{
 			call.Call("drop table if exists users"),
-			call.Call("CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT, age INT)"),
+			call.Call("CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT, age INTEGER)"),
 			call.Call("insert into users (name, age) values ('Alice', 18)"),
 			call.Call("insert into users (name, age) values ('Bob', 20)"),
 			call.Begin(tx1),
