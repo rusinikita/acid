@@ -1,0 +1,28 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: acid
+      POSTGRES_PASSWORD: strong_password_123
+      POSTGRES_DB: demo
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U acid -d demo" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: strong_password_123
+      MYSQL_DATABASE: demo
+      MYSQL_USER: acid
+      MYSQL_PASSWORD: strong_password_123
+    ports:
+      - "3306:3306"
