@@ -35,6 +35,13 @@ func (ed *eventData) headers() []string {
 	return headers
 }
 
+func (ed *eventData) clean() {
+	ed.events = ed.events[:0]
+	ed.transactions = ed.transactions[:0]
+	ed.selectedTrxIndex = ""
+	ed.selectedEventIndex = 0
+}
+
 func (ed *eventData) At(row, cell int) string {
 	e := ed.events[row]
 	trx := ed.transactions[cell]

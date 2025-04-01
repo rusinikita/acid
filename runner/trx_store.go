@@ -2,8 +2,10 @@ package runner
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/rusinikita/acid/call"
+	"log"
 	"maps"
 	"slices"
 	"sync"
@@ -95,6 +97,21 @@ func (t *TrxStore) Running() []call.TrxID {
 	defer t.mutex.Unlock()
 
 	return slices.Collect(maps.Keys(t.running))
+}
+
+func (t *TrxStore) ResetAll() {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
+	for id := range t.trxMap {
+		err := t.trxMap[id].Rollback()
+		if err != nil && !errors.Is(err, sql.ErrTxDone) && !errors.Is(err, sql.ErrConnDone) {
+			log.Fatalf("rollback trx %s: %v", id, err)
+		}
+	}
+
+	clear(t.trxMap)
+	clear(t.running)
 }
 
 type execWrapper struct {

@@ -1,6 +1,8 @@
 package run
 
 import (
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -20,6 +22,8 @@ type model struct {
 	table *table.Table
 	vp    viewport.Model
 	data  *eventData
+
+	help help.Model
 }
 
 func NewRunTable(runner runner) tea.Model {
@@ -33,6 +37,8 @@ func NewRunTable(runner runner) tea.Model {
 
 		table: t,
 		data:  data,
+
+		help: help.New(),
 	}
 
 	styleFunc := func(row, _ int) lipgloss.Style {
@@ -70,19 +76,28 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		if key.Matches(msg, theme.DefaultKB.Back) {
+			return m, router.Route("list")
+		}
 	case tea.WindowSizeMsg:
 		m.table.Height(msg.Height)
 		m.table.Width(msg.Width)
 		m.vp.Width = msg.Width
-		m.vp.Height = msg.Height
+		m.vp.Height = msg.Height - 1
 
 		m.window = msg
 
 		m.UpdateViewport()
 	case router.Message:
-		m.runner.Run(sequence.Sequences[msg.DataInt])
+		m.data.clean()
 
-		return m, readNextEvent(m.runner)
+		run := func() tea.Msg {
+			m.runner.Run(sequence.Sequences[msg.DataInt])
+
+			return nil
+		}
+
+		return m, tea.Sequence(run, readNextEvent(m.runner))
 	case newEvent:
 		m.running = msg.WaitingMore
 		if !m.running {
@@ -105,7 +120,7 @@ func (m *model) UpdateViewport() {
 }
 
 func (m *model) View() string {
-	return m.vp.View()
+	return lipgloss.JoinVertical(lipgloss.Top, m.vp.View(), "  "+m.help.ShortHelpView(theme.DefaultKB.Menu()))
 }
 
 type newEvent struct {
