@@ -46,7 +46,7 @@ func (ed *eventData) At(row, cell int) string {
 	e := ed.events[row]
 	trx := ed.transactions[cell]
 
-	s := e.Cell(trx)
+	s := Cell(e, trx)
 
 	return s
 }
