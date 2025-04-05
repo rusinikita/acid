@@ -90,6 +90,27 @@ var Sequences = []Sequence{
 		LearningLinks: nil,
 	},
 	{
+		Name:        "Deadlock",
+		Description: "Demonstrates deadlock scenario where two transactions wait for each other to release locks",
+		Calls: []call.Step{
+			call.Call("drop table if exists resources"),
+			call.Call("CREATE TABLE resources (id INTEGER PRIMARY KEY, name TEXT, value INTEGER)"),
+			call.Call("insert into resources (id, name, value) values (1, 'Resource1', 100), (2, 'Resource2', 200)"),
+			call.Begin(tx1),
+			call.Begin(tx2),
+			call.Call("update resources set value = value - 10 where id = 1", tx1), // tx1 locks Resource1
+			call.Call("update resources set value = value + 10 where id = 2", tx2), // tx2 locks Resource2
+			call.Call("update resources set value = value - 10 where id = 2", tx1), // tx1 waits for tx2
+			call.Call("update resources set value = value + 10 where id = 1", tx2), // tx2 waits for tx1
+			call.Commit(tx1), // Deadlock resolution
+			call.Commit(tx2),
+			call.Call("select * from resources"),
+		},
+		LearningLinks: []string{
+			"https://en.wikipedia.org/wiki/Deadlock",
+      }
+  },
+  {
 		Name:        "Dirty Read",
 		Description: "Demonstrates dirty read scenario where one transaction reads uncommitted changes made by another transaction",
 		Calls: []call.Step{
