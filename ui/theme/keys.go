@@ -18,6 +18,10 @@ var DefaultKB = KeyBindings{
 		key.WithKeys(tea.KeyBackspace.String(), "b"),
 		key.WithHelp("⌫/b", "back"),
 	),
+	Mode: key.NewBinding(
+		key.WithKeys("m", tea.KeySpace.String()),
+		key.WithHelp("m/space", "view mode"),
+	),
 	Learn: key.NewBinding(),
 }
 
@@ -25,6 +29,7 @@ type KeyBindings struct {
 	Up    key.Binding
 	Down  key.Binding
 	Back  key.Binding
+	Mode  key.Binding
 	Learn key.Binding
 }
 
@@ -33,6 +38,7 @@ func (b KeyBindings) Menu() []key.Binding {
 		b.Up,
 		b.Down,
 		b.Back,
+		b.Mode,
 		b.Learn,
 	}
 }

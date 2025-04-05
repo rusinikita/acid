@@ -7,14 +7,18 @@ import (
 )
 
 type eventData struct {
-	events             []event.Event
-	transactions       []call.TrxID
-	selectedTrxIndex   call.TrxID
-	selectedEventIndex int
+	events        []event.Event
+	steps         []call.Step
+	transactions  []call.TrxID
+	onlyStepsMode bool
 }
 
 func (ed *eventData) add(e event.Event) {
 	ed.events = append(ed.events, e)
+
+	if step := e.Step(); step != nil {
+		ed.steps = append(ed.steps, *step)
+	}
 
 	if !slices.Contains(ed.transactions, e.Trx()) {
 		ed.transactions = append(ed.transactions, e.Trx())
@@ -38,13 +42,16 @@ func (ed *eventData) headers() []string {
 func (ed *eventData) clean() {
 	ed.events = ed.events[:0]
 	ed.transactions = ed.transactions[:0]
-	ed.selectedTrxIndex = ""
-	ed.selectedEventIndex = 0
 }
 
 func (ed *eventData) At(row, cell int) string {
-	e := ed.events[row]
 	trx := ed.transactions[cell]
+
+	if ed.onlyStepsMode {
+		return StepStr(ed.steps[row], trx)
+	}
+
+	e := ed.events[row]
 
 	s := Cell(e, trx)
 
@@ -52,6 +59,10 @@ func (ed *eventData) At(row, cell int) string {
 }
 
 func (ed *eventData) Rows() int {
+	if ed.onlyStepsMode {
+		return len(ed.steps)
+	}
+
 	return len(ed.events)
 }
 
