@@ -21,16 +21,12 @@ func Cell(e event.Event, trx call.TrxID) string {
 	step := e.Step()
 	result := e.Result()
 
-	if step == nil && e.Result() == nil {
-		return theme.EventTypeStyle.Render("waiting")
+	if step == nil && result == nil {
+		return theme.EventTypeStyle.Render("???")
 	}
 
 	if step != nil {
-		if step.Code != "" {
-			return theme.EventTypeStyle.Render("request") + "\n" + code.Highlight(step.Code)
-		}
-
-		return "Transaction " + theme.SQLKeywordStyle.Render(step.TrxCommand.String())
+		return StepStr(*step, trx)
 	}
 
 	response := theme.EventTypeStyle.Render("response")
@@ -44,4 +40,16 @@ func Cell(e event.Event, trx call.TrxID) string {
 	}
 
 	return response + "\n" + table.New().Headers(result.Rows.Columns...).Rows(result.Rows.Rows...).String()
+}
+
+func StepStr(step call.Step, trx call.TrxID) string {
+	if trx != step.Trx {
+		return ""
+	}
+
+	if step.Code != "" {
+		return theme.EventTypeStyle.Render("request") + "\n" + code.Highlight(step.Code)
+	}
+
+	return "Transaction " + theme.SQLKeywordStyle.Render(step.TrxCommand.String())
 }

@@ -108,9 +108,9 @@ var Sequences = []Sequence{
 		},
 		LearningLinks: []string{
 			"https://en.wikipedia.org/wiki/Deadlock",
-      }
-  },
-  {
+		},
+	},
+	{
 		Name:        "Dirty Read",
 		Description: "Demonstrates dirty read scenario where one transaction reads uncommitted changes made by another transaction",
 		Calls: []call.Step{
@@ -128,9 +128,9 @@ var Sequences = []Sequence{
 		},
 		LearningLinks: []string{
 			"https://en.wikipedia.org/wiki/Isolation_(database_systems)#Dirty_reads",
-    }
-  },
-  {
+		},
+	},
+	{
 		Name:        "Phantom Reads",
 		Description: "Demonstrates phantom reads where transaction sees different results for the same query due to another transaction inserting new rows",
 		Calls: []call.Step{

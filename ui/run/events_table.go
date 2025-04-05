@@ -27,7 +27,9 @@ type model struct {
 }
 
 func NewRunTable(runner runner) tea.Model {
-	data := &eventData{}
+	data := &eventData{
+		onlyStepsMode: true,
+	}
 
 	t := table.New().Data(data)
 
@@ -79,12 +81,16 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if key.Matches(msg, theme.DefaultKB.Back) {
 			return m, router.Route("list")
 		}
-	case tea.WindowSizeMsg:
-		m.table.Height(msg.Height)
-		m.table.Width(msg.Width)
-		m.vp.Width = msg.Width
-		m.vp.Height = msg.Height - 1
 
+		if key.Matches(msg, theme.DefaultKB.Mode) {
+			m.data.onlyStepsMode = !m.data.onlyStepsMode
+			m.vp.YOffset = 0
+			m.UpdateViewport()
+
+			return m, nil
+		}
+
+	case tea.WindowSizeMsg:
 		m.window = msg
 
 		m.UpdateViewport()
@@ -116,11 +122,24 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) UpdateViewport() {
+	msg := m.window
+
+	m.table.Height(msg.Height)
+	m.table.Width(msg.Width)
+	m.vp.Width = msg.Width
+	m.vp.Height = msg.Height - m.bordersHeight()
+
 	m.vp.SetContent(m.table.String())
 }
 
+func (m *model) bordersHeight() int {
+	return 1
+}
+
 func (m *model) View() string {
-	return lipgloss.JoinVertical(lipgloss.Top, m.vp.View(), "  "+m.help.ShortHelpView(theme.DefaultKB.Menu()))
+	bottom := "  " + m.help.ShortHelpView(theme.DefaultKB.Menu())
+
+	return lipgloss.JoinVertical(lipgloss.Top, m.vp.View(), bottom)
 }
 
 type newEvent struct {
