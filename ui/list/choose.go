@@ -16,11 +16,11 @@ type choose struct {
 	list list.Model
 }
 
-func New() tea.Model {
+func New(db string) tea.Model {
 	listModel := list.New(nil, itemDelegate{}, 20, 14)
 	listModel.SetFilteringEnabled(false)
 	listModel.SetShowStatusBar(false)
-	listModel.Title = "Select sequence"
+	listModel.Title = fmt.Sprintf("Select sequence to run on '%s'", db)
 	listModel.InfiniteScrolling = true
 
 	items := make([]list.Item, 0, len(sequence.Sequences))

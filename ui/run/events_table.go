@@ -1,6 +1,7 @@
 package run
 
 import (
+	"fmt"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -24,9 +25,12 @@ type model struct {
 	data  *eventData
 
 	help help.Model
+
+	db              string
+	currentSequence int
 }
 
-func NewRunTable(runner runner) tea.Model {
+func NewRunTable(runner runner, db string) tea.Model {
 	data := &eventData{
 		onlyStepsMode: true,
 	}
@@ -41,6 +45,7 @@ func NewRunTable(runner runner) tea.Model {
 		data:  data,
 
 		help: help.New(),
+		db:   db,
 	}
 
 	styleFunc := func(row, _ int) lipgloss.Style {
@@ -96,6 +101,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.UpdateViewport()
 	case router.Message:
 		m.data.clean()
+		m.currentSequence = msg.DataInt
 
 		run := func() tea.Msg {
 			m.runner.Run(sequence.Sequences[msg.DataInt])
@@ -137,7 +143,17 @@ func (m *model) bordersHeight() int {
 }
 
 func (m *model) View() string {
-	bottom := "  " + m.help.ShortHelpView(theme.DefaultKB.Menu())
+	menu := "  " + m.help.ShortHelpView(theme.DefaultKB.Menu())
+	dbLabel := fmt.Sprint("seq ", m.currentSequence+1, " ", m.db)
+	dbLabelLen := len(dbLabel)
+	dbLabel = theme.StatusLineStyle.Render(dbLabel)
+	fillWidth := m.window.Width - len(menu) - len(dbLabel)
+	if fillWidth < 0 {
+		fillWidth = 0
+	}
+
+	bottom := lipgloss.PlaceHorizontal(m.window.Width, lipgloss.Left, menu)
+	bottom = bottom[:len(bottom)-dbLabelLen-4] + dbLabel
 
 	return lipgloss.JoinVertical(lipgloss.Top, m.vp.View(), bottom)
 }
