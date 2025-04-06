@@ -9,6 +9,7 @@ import (
 	"github.com/rusinikita/acid/ui/router"
 	"github.com/rusinikita/acid/ui/run"
 	"log"
+	"os"
 )
 
 var (
@@ -17,13 +18,14 @@ var (
 
 func main() {
 	conn := db.Connect()
+	driver := os.Getenv("DB_DRIVER")
 
 	r := runner.New(conn)
 	i := runner.NewIterator(r)
 
 	routes := map[string]tea.Model{
-		"run":  run.NewRunTable(i),
-		"list": list.New(),
+		"run":  run.NewRunTable(i, driver),
+		"list": list.New(driver),
 	}
 
 	app := router.NewRouter(routes, router.Route("list"))

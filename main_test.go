@@ -16,7 +16,7 @@ func TestName(t *testing.T) {
 	i := runner.NewIterator(r)
 
 	var (
-		model tea.Model = run.NewRunTable(i)
+		model tea.Model = run.NewRunTable(i, "pg")
 		cmd             = model.Init()
 	)
 
@@ -24,9 +24,11 @@ func TestName(t *testing.T) {
 	model, _ = model.Update(router.Message{DataInt: 0})
 
 	for {
-		msg := cmd()
+		if cmd != nil {
+			msg := cmd()
 
-		model, cmd = model.Update(msg)
+			model, cmd = model.Update(msg)
+		}
 
 		view := model.View()
 		println(len(view))
