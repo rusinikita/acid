@@ -1,7 +1,7 @@
 # acid
-SQL interview questions learning tool.
+SQL transactions learning tool.
 
-Helps you quicly test and learn parallel transactions' behaviour.
+Helps you quickly test and learn parallel transactions' behaviour.
 
 ![](docs/tx_screeshot.png)
 
