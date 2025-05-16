@@ -95,6 +95,14 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
+		if key.Matches(msg, theme.DefaultKB.ShowSetup) {
+			m.data.showSetupEvents = !m.data.showSetupEvents
+			m.vp.YOffset = 0
+			m.UpdateViewport()
+
+			return m, nil
+		}
+
 	case tea.WindowSizeMsg:
 		m.window = msg
 
@@ -117,7 +125,6 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		m.data.add(msg.Event)
-		m.table.Headers(m.data.headers()...)
 
 		m.UpdateViewport()
 
@@ -130,6 +137,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *model) UpdateViewport() {
 	msg := m.window
 
+	m.table.Headers(m.data.headers()...)
 	m.table.Height(msg.Height)
 	m.table.Width(msg.Width)
 	m.vp.Width = msg.Width

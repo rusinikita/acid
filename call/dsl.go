@@ -1,5 +1,12 @@
 package call
 
+func Setup(code string) Step {
+	return Step{
+		Code:      code,
+		TestSetup: true,
+	}
+}
+
 func Call(code string, id ...TrxID) Step {
 	call := Step{
 		Code: code,

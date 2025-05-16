@@ -2,9 +2,11 @@ package runner
 
 import (
 	"database/sql"
+	"errors"
 	"github.com/rusinikita/acid/call"
 	"github.com/rusinikita/acid/event"
 	"github.com/rusinikita/acid/sequence"
+	"sync"
 	"time"
 )
 
@@ -29,26 +31,45 @@ func (r *Runner) Run(sequence sequence.Sequence) <-chan event.Event {
 	go func() {
 		r.store.ResetAll()
 
+		wg := sync.WaitGroup{}
+
 		for i, step := range sequence.Calls {
-			r.RunSQL(step, results, i == len(sequence.Calls)-1)
+			if i > 0 && step.TestSetup && !sequence.Calls[i-1].TestSetup {
+				results <- event.Call(step, nil)
+				results <- event.Result(step, call.ExecResult{
+					Error: errors.New("setup steps are allowed only before call steps"),
+				}, nil)
+
+				break
+			}
+
+			if step.Trx == "" {
+				r.RunSQL(step, results)
+
+				continue
+			}
+
+			wg.Add(1)
+			go func(s call.Step) {
+				r.RunSQL(step, results)
+
+				wg.Done()
+			}(step)
+
+			time.Sleep(200 * time.Millisecond)
 		}
+
+		wg.Wait()
+		close(results)
 	}()
 
 	return results
 }
 
-func (r *Runner) RunSQL(step call.Step, events chan event.Event, lastStep bool) {
+func (r *Runner) RunSQL(step call.Step, events chan event.Event) {
 	events <- event.Call(step, r.store.Running())
 
-	go func() {
-		result := step.Exec(r.store, nil)
+	result := step.Exec(r.store, nil)
 
-		events <- event.Result(step, result, r.store.Running())
-
-		if lastStep {
-			close(events)
-		}
-	}()
-
-	time.Sleep(200 * time.Millisecond)
+	events <- event.Result(step, result, r.store.Running())
 }

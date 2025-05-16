@@ -39,6 +39,7 @@ type Step struct {
 	ParamNames []string
 	Trx        TrxID
 	TrxCommand TrxCommandType
+	TestSetup  bool
 }
 
 type TrxID string
@@ -92,7 +93,7 @@ func Select(exec DBExec, sql string, args []any) (*SelectResult, error) {
 	columnCount := len(columns)
 
 	// Create slices once outside the loop for efficiency
-	values := make([]string, columnCount)
+	values := make([]*string, columnCount)
 	scanArgs := make([]any, columnCount)
 	for i := range scanArgs {
 		scanArgs[i] = &values[i]
@@ -106,7 +107,12 @@ func Select(exec DBExec, sql string, args []any) (*SelectResult, error) {
 		// Create a new row for each iteration
 		row := make([]string, columnCount)
 		for i := range row {
-			row[i] = values[i]
+			if values[i] == nil {
+				row[i] = "NULL"
+				continue
+			}
+
+			row[i] = *values[i]
 		}
 
 		resultRows = append(resultRows, row)
@@ -155,7 +161,7 @@ func (c Step) Exec(store TrxStore, pp Params) (result ExecResult) {
 		return result
 	}
 
-	if strings.Contains(strings.ToLower(c.Code), "select") {
+	if strings.HasPrefix(strings.ToLower(c.Code), "select") || strings.HasPrefix(strings.ToLower(c.Code), "show") {
 		rows, err := Select(exec, sql, args)
 
 		result.Rows = rows
