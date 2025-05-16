@@ -39,6 +39,10 @@ func Cell(e event.Event, trx call.TrxID) string {
 		return response + "\n" + "rows affected: " + fmt.Sprint(result.RowsAffected)
 	}
 
+	if len(result.Rows.Columns) == 0 {
+		return response + "\n" + "No columns selected"
+	}
+
 	return response + "\n" + table.New().Headers(result.Rows.Columns...).Rows(result.Rows.Rows...).String()
 }
 

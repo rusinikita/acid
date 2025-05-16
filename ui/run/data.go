@@ -7,13 +7,29 @@ import (
 )
 
 type eventData struct {
-	events        []event.Event
-	steps         []call.Step
-	transactions  []call.TrxID
-	onlyStepsMode bool
+	showSetupEvents bool
+	onlyStepsMode   bool
+
+	events       []event.Event
+	steps        []call.Step
+	transactions []call.TrxID
+
+	hasNoTxCalls bool
+}
+
+func (ed *eventData) visibleTransactions() []call.TrxID {
+	if !ed.showSetupEvents && !ed.hasNoTxCalls && len(ed.transactions) > 1 {
+		return ed.transactions[1:]
+	}
+
+	return ed.transactions
 }
 
 func (ed *eventData) add(e event.Event) {
+	if !e.TestSetup() && e.Trx() == "" {
+		ed.hasNoTxCalls = true
+	}
+
 	ed.events = append(ed.events, e)
 
 	if step := e.Step(); step != nil {
@@ -26,8 +42,10 @@ func (ed *eventData) add(e event.Event) {
 }
 
 func (ed *eventData) headers() []string {
-	headers := make([]string, len(ed.transactions))
-	for i, trx := range ed.transactions {
+	transactions := ed.visibleTransactions()
+
+	headers := make([]string, len(transactions))
+	for i, trx := range transactions {
 		if trx == "" {
 			headers[i] = "No tx requests"
 			continue
@@ -41,17 +59,27 @@ func (ed *eventData) headers() []string {
 
 func (ed *eventData) clean() {
 	ed.events = ed.events[:0]
-	ed.transactions = ed.transactions[:0]
+	ed.steps = ed.steps[:0]
+	ed.transactions = []call.TrxID{""}
+	ed.hasNoTxCalls = false
 }
 
 func (ed *eventData) At(row, cell int) string {
-	trx := ed.transactions[cell]
+	trx := ed.visibleTransactions()[cell]
 
 	if ed.onlyStepsMode {
-		return StepStr(ed.steps[row], trx)
+		step := ed.steps[row]
+		if step.TestSetup && !ed.showSetupEvents {
+			return ""
+		}
+
+		return StepStr(step, trx)
 	}
 
 	e := ed.events[row]
+	if e.TestSetup() && !ed.showSetupEvents {
+		return ""
+	}
 
 	s := Cell(e, trx)
 
@@ -67,5 +95,5 @@ func (ed *eventData) Rows() int {
 }
 
 func (ed *eventData) Columns() int {
-	return len(ed.transactions)
+	return len(ed.visibleTransactions())
 }

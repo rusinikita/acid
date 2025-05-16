@@ -5,15 +5,162 @@ import "github.com/rusinikita/acid/call"
 var (
 	tx1 = call.TrxID("first")
 	tx2 = call.TrxID("second")
+	tx3 = call.TrxID("third")
 )
 
-var Sequences = []Sequence{
+var Sequences = append(TrxSpeech, Common...)
+
+var TrxSpeech = []Sequence{
+	// UPDATE
+	{
+		Name:        "Lost Update example",
+		Description: "There is a potential bug",
+		Calls: []call.Step{
+			call.Setup("drop table if exists speaker_slots"),
+			call.Setup(`CREATE TABLE speaker_slots (
+    meetup_id INTEGER NOT NULL, 
+    speaker_id INTEGER DEFAULT NULL,
+    start_time INTEGER NOT NULL DEFAULT 1, 
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    PRIMARY KEY(meetup_id, start_time)
+)`),
+			call.Setup("insert into speaker_slots (meetup_id, start_time) VALUES (1, 1)"),
+			call.Setup("insert into speaker_slots (meetup_id, start_time) VALUES (1, 2)"),
+			call.Begin(tx1),
+			call.Begin(tx2),
+			call.Call("select meetup_id, start_time, speaker_id from speaker_slots where meetup_id = 1", tx1),
+			call.Call("select meetup_id, start_time, speaker_id from speaker_slots where meetup_id = 1", tx2),
+			call.Call("update speaker_slots set speaker_id = 1 where meetup_id = 1 and start_time = 1", tx1),
+			call.Call("update speaker_slots set speaker_id = 1 where meetup_id = 1 and start_time = 1", tx2),
+			call.Commit(tx1),
+			call.Commit(tx2),
+			call.Call("select meetup_id, start_time, speaker_id from speaker_slots where meetup_id = 1"),
+		},
+	},
+	{
+		Name:        "Lost Update fix",
+		Description: "Fix lost update",
+		Calls: []call.Step{
+			call.Setup("drop table if exists speaker_slots"),
+			call.Setup(`CREATE TABLE speaker_slots (
+    meetup_id INTEGER NOT NULL, 
+    speaker_id INTEGER DEFAULT NULL,
+    start_time INTEGER NOT NULL DEFAULT 1, 
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    PRIMARY KEY(meetup_id, start_time)
+)`),
+			call.Setup("insert into speaker_slots (meetup_id, start_time) VALUES (1, 1)"),
+			call.Setup("insert into speaker_slots (meetup_id, start_time) VALUES (1, 2)"),
+			call.Begin(tx1),
+			call.Begin(tx2),
+			call.Call("select meetup_id, start_time, speaker_id from speaker_slots where meetup_id = 1", tx1),
+			call.Call("select meetup_id, start_time, speaker_id from speaker_slots where meetup_id = 1", tx2),
+			call.Call("update speaker_slots set speaker_id = 1 where meetup_id = 1 and start_time = 1 and speaker_id is null", tx1),
+			call.Call("update speaker_slots set speaker_id = 1 where meetup_id = 1 and start_time = 1 and speaker_id is null", tx2),
+			call.Commit(tx1),
+			call.Commit(tx2),
+			call.Call("select meetup_id, start_time, speaker_id from speaker_slots where meetup_id = 1"),
+		},
+	},
+	// insert + update
+	{
+		Name:        "INSERT constraint err example",
+		Description: "Shows how error appear during transaction",
+		Calls: []call.Step{
+			call.Setup("drop table if exists meetups"),
+			call.Setup("drop table if exists visitors"),
+			call.Setup(`CREATE TABLE meetups (
+    id SERIAL NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    creator_id INTEGER NOT NULL,
+    max_seats INTEGER NOT NULL DEFAULT 1,
+    booked_seats INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW(),
+    CHECK(booked_seats <= max_seats)
+)`),
+			call.Setup(`CREATE TABLE visitors (
+    meetup_id INTEGER NOT NULL,
+    visitor_id INTEGER NOT NULL,
+    seats INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    PRIMARY KEY (meetup_id, visitor_id)
+)`),
+			call.Setup("insert into meetups (creator_id, name, max_seats) VALUES (123, 'Meet with Biba&Boba', 10)"),
+			call.Setup("insert into visitors (meetup_id, visitor_id, seats) VALUES (1, 1, 8)"),
+			call.Begin(tx1),
+			call.Begin(tx2),
+			call.Call("SELECT sum(seats) FROM visitors WHERE meetup_id = 1", tx1),
+			call.Call("insert into visitors (meetup_id, visitor_id, seats) VALUES (1, 2, 2)", tx1),
+			call.Call("SELECT sum(seats) FROM visitors WHERE meetup_id = 1", tx2),
+			call.Call("insert into visitors (meetup_id, visitor_id, seats) VALUES (1, 2, 2)", tx2),
+			call.Commit(tx1),
+			call.Commit(tx2),
+			call.Call("SELECT sum(seats) FROM visitors WHERE meetup_id = 1"),
+		},
+	},
+	{
+		Name:        "INSERT check constraint err example",
+		Description: "Shows how error appear during transaction",
+		Calls: []call.Step{
+			call.Setup("drop table if exists meetups"),
+			call.Setup("drop table if exists visitors"),
+			call.Setup(`CREATE TABLE meetups (
+    id SERIAL NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    creator_id INTEGER NOT NULL,
+    max_seats INTEGER NOT NULL DEFAULT 1,
+    booked_seats INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW(),
+    CHECK ( booked_seats <= max_seats )
+)`),
+			call.Setup(`CREATE TABLE visitors (
+    meetup_id INTEGER NOT NULL,
+    visitor_id INTEGER NOT NULL,
+    seats INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    PRIMARY KEY (meetup_id, visitor_id)
+)`),
+			call.Setup("insert into visitors (meetup_id, visitor_id, seats) VALUES (1, 1, 8)"),
+			call.Setup("insert into meetups (creator_id, name, max_seats, booked_seats) VALUES (123, 'Meet with Biba&Boba', 10, 8)"),
+			call.Begin(tx1),
+			call.Begin(tx2),
+			call.Call("insert into visitors (meetup_id, visitor_id, seats) VALUES (1, 2, 2)", tx1),
+			call.Call("update meetups set booked_seats = booked_seats + 2 where id = 1", tx1),
+			call.Call("insert into visitors (meetup_id, visitor_id, seats) VALUES (1, 3, 2)", tx2),
+			call.Call("update meetups set booked_seats = booked_seats + 2 where id = 1", tx2),
+			call.Commit(tx1),
+			call.Commit(tx2),
+			call.Call("SELECT sum(seats) FROM visitors WHERE meetup_id = 1"),
+		},
+	},
+}
+
+var Common = []Sequence{
+	// other
+	{
+		Name:        "PG Lock",
+		Description: "Lock pg",
+		Calls: []call.Step{
+			call.Setup("drop table if exists for_test"),
+			call.Setup(`CREATE TABLE for_test (
+    id INTEGER NOT NULL PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT NOW()
+)`),
+			call.Begin(tx1),
+			call.Begin(tx2),
+			call.Call(`SELECT * from for_test where id = 1 FOR UPDATE`, tx1),
+			call.Call(`SELECT * from for_test where id = 1 FOR UPDATE`, tx2),
+			call.Call(`INSERT INTO for_test (id) VALUES (1)`, tx2),
+			call.Commit(tx1),
+			call.Commit(tx2),
+		},
+	},
 	{
 		Name:        "Insert isolation level",
 		Description: "Shows default isolation level and how it affects received data",
 		Calls: []call.Step{
-			call.Call("drop table if exists exec_test"),
-			call.Call("CREATE TABLE exec_test (id SERIAL PRIMARY KEY, name TEXT)"),
+			call.Setup("drop table if exists exec_test"),
+			call.Setup("CREATE TABLE exec_test (id SERIAL PRIMARY KEY, name TEXT)"),
 			call.Begin(tx1),
 			call.Begin(tx2),
 			call.Call("insert into exec_test (name) values ('biba')", tx1),
@@ -24,44 +171,35 @@ var Sequences = []Sequence{
 		},
 	},
 	{
-		Name:        "Update + condition",
-		Description: "Shows that update locks row after finding, that can cause bugs",
+		Name:        "Insert isolation level 2",
+		Description: "Shows default isolation level and how it affects received data",
 		Calls: []call.Step{
 			call.Call("drop table if exists exec_test"),
-			call.Call("CREATE TABLE exec_test (id INTEGER PRIMARY KEY, name TEXT, counter INTEGER)"),
-			call.Call("insert into exec_test (id, name, counter) values (1, 'biba', 0)"),
-			call.Call("update exec_test set counter = counter + 1"),
+			call.Call("CREATE TABLE exec_test (id INTEGER, name TEXT)"),
+			call.Call("INSERT INTO exec_test (id, name) VALUES (1, 'biba')"),
 			call.Begin(tx1),
 			call.Begin(tx2),
-			call.Call("update exec_test set counter = counter + 1 where id = 1 and counter < 2", tx1),
-			call.Call("update exec_test set counter = counter + 1 where id = 1 and counter < 2", tx2),
-			call.Call("update exec_test set counter = counter + 1 where id = 1 and counter < 2", tx1),
+			call.Call("update exec_test set name = 'biba1' where id = 1", tx1),
+			call.Call("update exec_test set name = 'biba2' where id = 1", tx2),
+			call.Call("select * from exec_test where id = 1 for update"),
 			call.Commit(tx1),
 			call.Commit(tx2),
-			call.Call("select * from exec_test"),
+			call.Call("select * from exec_test where id = 1 for update"),
 		},
-		LearningLinks: nil,
 	},
 	{
-		Name:        "Lost update",
-		Description: "Demonstrates a lost update scenario where one transaction overwrites changes of another transaction across two related tables",
+		Name:        "Advisory lock MySQL",
+		Description: "Shows default isolation level and how it affects received data",
 		Calls: []call.Step{
-			call.Call("drop table if exists cars"),
-			call.Call("drop table if exists invoices"),
-			call.Call("CREATE TABLE cars (id INTEGER PRIMARY KEY, model TEXT, price INTEGER, buyer TEXT)"),
-			call.Call("CREATE TABLE invoices (id INTEGER PRIMARY KEY, car_id INTEGER, amount INTEGER, buyer TEXT)"),
-			call.Call("insert into cars (id, model, price, buyer) values (1, 'Tesla Model S', 80000, 'A')"),
-			call.Call("insert into invoices (id, car_id, amount, buyer) values (1, 1, 80000, 'A')"),
 			call.Begin(tx1),
 			call.Begin(tx2),
-			call.Call("update cars set buyer = 'X' where id = 1", tx1),
-			call.Call("update cars set buyer = 'Y' where id = 1", tx2),
-			call.Call("update invoices set buyer = 'Y' where car_id = 1", tx2),
-			call.Call("update invoices set buyer = 'X' where car_id = 1", tx1),
+			call.Call("SELECT IS_FREE_LOCK('lock')", tx1),
+			call.Call("SELECT GET_LOCK('lock',10)", tx1),
+			call.Call("SELECT GET_LOCK('lock',10) skip locked", tx2),
+			call.Call("SELECT IS_FREE_LOCK('lock')", tx2),
 			call.Commit(tx1),
 			call.Commit(tx2),
-			call.Call("select * from cars"),
-			call.Call("select * from invoices"),
+			call.Call("SELECT IS_FREE_LOCK('lock')"),
 		},
 	},
 	{

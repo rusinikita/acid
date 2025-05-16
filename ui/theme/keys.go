@@ -23,14 +23,19 @@ var DefaultKB = KeyBindings{
 		key.WithHelp("m/space", "view mode"),
 	),
 	Learn: key.NewBinding(),
+	ShowSetup: key.NewBinding(
+		key.WithKeys("s"),
+		key.WithHelp("s", "setup sql"),
+	),
 }
 
 type KeyBindings struct {
-	Up    key.Binding
-	Down  key.Binding
-	Back  key.Binding
-	Mode  key.Binding
-	Learn key.Binding
+	Up        key.Binding
+	Down      key.Binding
+	Back      key.Binding
+	Mode      key.Binding
+	Learn     key.Binding
+	ShowSetup key.Binding
 }
 
 func (b KeyBindings) Menu() []key.Binding {
@@ -40,5 +45,6 @@ func (b KeyBindings) Menu() []key.Binding {
 		b.Back,
 		b.Mode,
 		b.Learn,
+		b.ShowSetup,
 	}
 }

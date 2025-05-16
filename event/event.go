@@ -6,25 +6,28 @@ import (
 )
 
 type Event struct {
-	trx     call.TrxID
-	step    *call.Step
-	result  *call.ExecResult
-	waiting []call.TrxID
+	trx       call.TrxID
+	step      *call.Step
+	result    *call.ExecResult
+	waiting   []call.TrxID
+	testSetup bool
 }
 
 func Call(step call.Step, waiting []call.TrxID) Event {
 	return Event{
-		trx:     step.Trx,
-		step:    &step,
-		waiting: waiting,
+		trx:       step.Trx,
+		step:      &step,
+		waiting:   waiting,
+		testSetup: step.TestSetup,
 	}
 }
 
 func Result(step call.Step, result call.ExecResult, waiting []call.TrxID) Event {
 	return Event{
-		trx:     step.Trx,
-		result:  &result,
-		waiting: waiting,
+		trx:       step.Trx,
+		result:    &result,
+		waiting:   waiting,
+		testSetup: step.TestSetup,
 	}
 }
 
@@ -42,4 +45,8 @@ func (e Event) Result() *call.ExecResult {
 
 func (e Event) IsWaiting(trx call.TrxID) bool {
 	return slices.Contains(e.waiting, trx)
+}
+
+func (e Event) TestSetup() bool {
+	return e.testSetup
 }
