@@ -23,3 +23,6 @@ runmysql:
 # Stop containers and removing volumes
 stopdb:
 	docker-compose down -v
+
+run:
+	go run main.go
