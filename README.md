@@ -47,7 +47,7 @@ Get answers to your questions:
 [![asciicast](https://asciinema.org/a/738395.svg)](https://asciinema.org/a/738395)
 ☝️ click to open app demo video
 
-👇 [Ru lang] Click to watch BigTech SQL essential knowledge video
+👇 [Ru lang] Click to watch ACID in action - BigTech SQL essentials video
 [![Watch the video with BigTech SQL essentials](https://img.youtube.com/vi/KMx5b7zIi0w/0.jpg)](https://youtu.be/KMx5b7zIi0w)
 
 ## Features
