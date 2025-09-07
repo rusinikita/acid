@@ -1,6 +1,6 @@
 # ACID - SQL transactions learning
 
-[![Go Version](https://img.shields.io/badge/go-1.19+-blue.svg)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/go-1.23+-blue.svg)](https://golang.org)
 [![Go Report Card](https://goreportcard.com/badge/github.com/rusinikita/acid)](https://goreportcard.com/report/github.com/rusinikita/acid)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![GitHub stars](https://img.shields.io/github/stars/rusinikita/acid.svg?style=social&label=Star)](https://github.com/rusinikita/acid)
@@ -15,8 +15,6 @@ A terminal-based visualization tool for testing SQL transaction sequences.
 - [Demo](#demo)
 - [Features](#features)
 - [Quick Start](#quick-start)
-- [Usage](#usage)
-- [Prerequisites](#prerequisites)
 - [Controls](#controls)
 - [Contributing](#contributing)
 - [License](#license)
@@ -47,7 +45,10 @@ Get answers to your questions:
 ## Demo
 
 [![asciicast](https://asciinema.org/a/738395.svg)](https://asciinema.org/a/738395)
-☝️ click to open demo video
+☝️ click to open app demo video
+
+👇 [Ru lang] Click to watch BigTech SQL essential knowledge video
+[![Watch the video with BigTech SQL essentials](https://img.youtube.com/vi/KMx5b7zIi0w/0.jpg)](https://youtu.be/KMx5b7zIi0w)
 
 ## Features
 
@@ -96,9 +97,17 @@ Every request runs concurrently, with the UI showing when transactions wait for 
 
 Explore predefined sequences for common transaction scenarios.
 
-## Usage
-
 ## Quick Start (5 steps, ~2 minutes)
+
+#### Prerequisites
+
+> **⚠️ Requirements**
+>
+> This tool requires a running PostgreSQL or MySQL database
+
+- Go 1.23+ to run program
+- Docker and Docker Compose (for local databases run command)
+- OR access to PostgreSQL/MySQL database
 
 #### 1 - Clone project
 
@@ -161,16 +170,6 @@ go run main.go
 Use arrow keys to select a sequence and press Enter to run it.
 
 Edit queries or create your own sequences in [sequence/sequences.go](sequence/sequences.go) file.
-
-## Prerequisites
-
-> **⚠️ Requirements**
-> 
-> This tool requires a running PostgreSQL or MySQL database. Use the provided Docker setup for the quickest start.
-
-- Go 1.19+ 
-- Docker and Docker Compose (for local databases)
-- OR access to PostgreSQL/MySQL database
 
 ## Supported Databases
 
