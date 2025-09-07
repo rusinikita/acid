@@ -14,7 +14,7 @@ A terminal-based visualization tool for testing SQL transaction sequences.
 - [Why ACID?](#why-acid)
 - [Demo](#demo)
 - [Features](#features)
-- [Quick Start](#quick-start)
+- [Quick Start](#quick-start-5-steps-2-minutes)
 - [Controls](#controls)
 - [Contributing](#contributing)
 - [License](#license)
