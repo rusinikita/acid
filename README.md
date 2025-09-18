@@ -125,7 +125,7 @@ make rundbs
 
 Or
 ```shell
-docker compose up
+docker compose up -d
 ```
 
 Alternatively, you can create a cloud database in 3 minutes:
@@ -140,17 +140,19 @@ Create `.env` file from `.env.example` content
 cp .env.example .env
 ```
 
-Edit the .env content:
-- Simply uncomment your preferred database for docker compose
-- Edit `DB_CONNECT` for your database link
+By default .env.example file is ready to connect to Postgresql in docker
+
+You can edit the .env content:
+- If you want to test MySQL-specific cases in Docker Compose - simply uncomment the MySQL section and comment out the PostgreSQL section 
+- Or edit environment variables for another database link
 
 ```dotenv
 # postgresql
- DB_DRIVER=postgres
- DB_CONNECT="host=localhost port=5432 user=acid password=strong_password_123 dbname=demo sslmode=disable"
+# DB_DRIVER=postgres
+# DB_CONNECT="host=localhost port=5432 user=acid password=strong_password_123 dbname=demo sslmode=disable"
 # mysql
-# DB_DRIVER=mysql
-# DB_CONNECT="acid:strong_password_123@tcp(127.0.0.1:3306)/demo"
+DB_DRIVER=mysql
+DB_CONNECT="acid:strong_password_123@tcp(127.0.0.1:3306)/demo"
 ```
 
 #### 4 - Run app
