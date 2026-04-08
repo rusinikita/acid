@@ -10,7 +10,7 @@ import (
 	"github.com/rusinikita/acid/sequence"
 )
 
-func (s *LostUpdateSuite) TestLostUpdateSequence() {
+func (s *PostgresSuite) TestLostUpdateSequence() {
 	tx1 := call.TrxID("first")
 	tx2 := call.TrxID("second")
 
