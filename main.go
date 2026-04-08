@@ -1,19 +1,16 @@
 package main
 
 import (
+	"log"
+	"os"
+
 	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/rusinikita/acid/db"
 	"github.com/rusinikita/acid/runner"
-	"github.com/rusinikita/acid/sequence"
 	"github.com/rusinikita/acid/ui/list"
 	"github.com/rusinikita/acid/ui/router"
 	"github.com/rusinikita/acid/ui/run"
-	"log"
-	"os"
-)
-
-var (
-	mainSequence = sequence.Sequences[0]
 )
 
 func main() {
