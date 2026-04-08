@@ -1,16 +1,23 @@
 package db
 
 import (
+	"database/sql"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
-	"database/sql"
 	"github.com/joho/godotenv"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 )
+
+// LoadEnv loads .env from baseDir and its parent directory.
+func LoadEnv(baseDir string) {
+	_ = godotenv.Load(filepath.Join(baseDir, ".env"))
+	_ = godotenv.Load(filepath.Join(filepath.Dir(baseDir), ".env"))
+}
 
 func Connect() *sql.DB {
 	// Load .env file from the root directory

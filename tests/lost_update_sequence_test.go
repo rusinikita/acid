@@ -1,15 +1,16 @@
 package tests
 
 import (
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/rusinikita/acid/call"
 	"github.com/rusinikita/acid/event"
 	"github.com/rusinikita/acid/runner"
 	"github.com/rusinikita/acid/sequence"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func (s *LostUpdateSuite) TestLostUpdateExample() {
+func (s *LostUpdateSuite) TestLostUpdateSequence() {
 	tx1 := call.TrxID("first")
 	tx2 := call.TrxID("second")
 
