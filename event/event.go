@@ -50,3 +50,7 @@ func (e Event) IsWaiting(trx call.TrxID) bool {
 func (e Event) TestSetup() bool {
 	return e.testSetup
 }
+
+func (e Event) Waiting() []call.TrxID {
+	return e.waiting
+}

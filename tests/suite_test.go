@@ -37,17 +37,17 @@ func configureDockerHost() {
 	}
 }
 
-type LostUpdateSuite struct {
+type PostgresSuite struct {
 	suite.Suite
 	pgContainer *tcpostgres.PostgresContainer
 	db          *sql.DB
 }
 
-func TestLostUpdateSuite(t *testing.T) {
-	suite.Run(t, new(LostUpdateSuite))
+func TestPostgresSuite(t *testing.T) {
+	suite.Run(t, new(PostgresSuite))
 }
 
-func (s *LostUpdateSuite) SetupSuite() {
+func (s *PostgresSuite) SetupSuite() {
 	ctx := context.Background()
 
 	pgContainer, err := tcpostgres.Run(ctx,
@@ -69,7 +69,7 @@ func (s *LostUpdateSuite) SetupSuite() {
 	s.db = db
 }
 
-func (s *LostUpdateSuite) TearDownSuite() {
+func (s *PostgresSuite) TearDownSuite() {
 	if s.db != nil {
 		s.db.Close()
 	}
