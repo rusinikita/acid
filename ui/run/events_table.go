@@ -28,9 +28,10 @@ type model struct {
 
 	db              string
 	currentSequence int
+	sequences       []sequence.Sequence
 }
 
-func NewRunTable(runner runner, db string) tea.Model {
+func NewRunTable(runner runner, db string, sequences []sequence.Sequence) tea.Model {
 	data := &eventData{
 		onlyStepsMode: true,
 	}
@@ -38,8 +39,9 @@ func NewRunTable(runner runner, db string) tea.Model {
 	t := table.New().Data(data)
 
 	m := &model{
-		runner:  runner,
-		running: true,
+		runner:    runner,
+		running:   true,
+		sequences: sequences,
 
 		table: t,
 		data:  data,
@@ -112,7 +114,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.currentSequence = msg.DataInt
 
 		run := func() tea.Msg {
-			m.runner.Run(sequence.Sequences[msg.DataInt])
+			m.runner.Run(m.sequences[msg.DataInt])
 
 			return nil
 		}
