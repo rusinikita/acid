@@ -1,0 +1,49 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - main: .
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats: [tar.gz]
+    name_template: '{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+release:
+  github:
+    owner: rusinikita
+    name: acid
+  draft: true
+  prerelease: true
+
+homebrew_casks:
+  - name: acid
+    repository:
+      owner: rusinikita
+      name: homebrew-tap
+    directory: Casks
+    homepage: "https://github.com/rusinikita/acid"
+    description: "Terminal tool for visualizing and testing SQL transaction sequences."
+    license: "GPL-3.0"
