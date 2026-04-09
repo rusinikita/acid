@@ -90,8 +90,8 @@ func printSummary(dir string, created []string) {
 	fmt.Printf("  %d. Edit .env with your database connection details\n", step)
 	step++
 	fmt.Printf("  %d. Open two terminal panes:\n", step)
-	fmt.Println("       LEFT   acid serve")
-	fmt.Println("       RIGHT  claude --system-prompt agents.md")
+	fmt.Println("       Run    acid serve")
+	fmt.Println("       Run    claude --system-prompt agents.md")
 	step++
 	fmt.Printf("  %d. Say \"Let's start\" — the AI agent will guide you\n", step)
 	step++
