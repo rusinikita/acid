@@ -48,3 +48,12 @@ func (b KeyBindings) Menu() []key.Binding {
 		b.ShowSetup,
 	}
 }
+
+func (b KeyBindings) ServerMenu() []key.Binding {
+	return []key.Binding{
+		b.Up,
+		b.Down,
+		b.Back,
+		b.ShowSetup,
+	}
+}
