@@ -44,7 +44,7 @@ A structured curriculum for senior-level engineering interviews. Work through ea
 - What does "consistency" actually mean — who is responsible for it?
 - Why is full isolation expensive?
 
-> **Note:** `acid` is useful for Atomicity (watch a rollback undo everything), Isolation (anomaly sequences in Phase 3), and Consistency — run two concurrent transactions both trying to insert the same unique value and watch one get a constraint violation, proving the database never allows an invalid state. Not useful for Durability — that requires crash recovery, which `acid` doesn't do.
+> **Note:** `acid` is useful for Atomicity (watch a rollback undo everything), Isolation (anomaly sequences in Phase 3), and Consistency — two good scenarios: (1) two transactions both insert the same unique value, one gets a constraint violation; (2) two transactions both run `UPDATE SET value = value + 1` with a `CHECK (value < 2)` constraint — the first commits, the second re-reads the updated value and the increment violates the constraint, so the database rejects it. Not useful for Durability — that requires crash recovery, which `acid` doesn't do.
 
 ---
 
