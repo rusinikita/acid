@@ -33,8 +33,16 @@ func (s *PostgresSuite) TestClientServerRoundTrip() {
 	}()
 
 	// Collect all events the server received and marshal them for comparison
+	source := runner.NewChannelSource(srv.Channel())
 	var received []protocol.EventMessage
-	for e := range srv.Channel() {
+	for {
+		e, ok := source.Next()
+		if !ok {
+			break
+		}
+		if e.IsStart() {
+			continue // skip start sentinel
+		}
 		msg := protocol.Marshal(e)
 		msg.Waiting = nil // waiting is timing-dependent; excluded from comparison
 		received = append(received, msg)

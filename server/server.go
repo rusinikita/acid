@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
-	"sync"
 
 	"github.com/rusinikita/acid/event"
 	"github.com/rusinikita/acid/protocol"
@@ -15,10 +14,9 @@ import (
 // POST /event   — deliver one event (JSON body: protocol.EventMessage)
 // POST /done    — signal end of stream; closes the event channel
 type Server struct {
-	addr      string
-	bound     string
-	ch        chan event.Event
-	closeOnce sync.Once
+	addr  string
+	bound string
+	ch    chan event.Event
 }
 
 func New(addr string) *Server {
@@ -60,8 +58,12 @@ func (s *Server) ListenAndServe() error {
 		s.ch <- protocol.Unmarshal(msg)
 		w.WriteHeader(http.StatusOK)
 	})
+	mux.HandleFunc("POST /start", func(w http.ResponseWriter, r *http.Request) {
+		s.ch <- event.Start()
+		w.WriteHeader(http.StatusOK)
+	})
 	mux.HandleFunc("POST /done", func(w http.ResponseWriter, r *http.Request) {
-		s.closeOnce.Do(func() { close(s.ch) })
+		s.ch <- event.Done()
 		w.WriteHeader(http.StatusOK)
 	})
 

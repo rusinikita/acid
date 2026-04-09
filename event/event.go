@@ -11,7 +11,15 @@ type Event struct {
 	result    *call.ExecResult
 	waiting   []call.TrxID
 	testSetup bool
+	start     bool
+	done      bool
 }
+
+func Start() Event { return Event{start: true} }
+func Done() Event  { return Event{done: true} }
+
+func (e Event) IsStart() bool { return e.start }
+func (e Event) IsDone() bool  { return e.done }
 
 func Call(step call.Step, waiting []call.TrxID) Event {
 	return Event{

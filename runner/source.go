@@ -18,8 +18,11 @@ func NewChannelSource(ch <-chan event.Event) *ChannelSource {
 // Run is a no-op; the server receives events from the network, not from a local DB.
 func (cs *ChannelSource) Run(_ sequence.Sequence) {}
 
-// Next blocks until an event is available or the channel is closed.
+// Next blocks until an event is available or a Done sentinel is received.
 func (cs *ChannelSource) Next() (event.Event, bool) {
 	e, ok := <-cs.ch
-	return e, ok
+	if !ok || e.IsDone() {
+		return event.Event{}, false
+	}
+	return e, true
 }

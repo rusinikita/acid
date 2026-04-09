@@ -164,15 +164,21 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, tea.Sequence(run, readNextEvent(m.runner))
 	case newEvent:
-		m.running = msg.WaitingMore
-		if !m.running {
+		if msg.Event.IsStart() {
+			m.data.clean()
+			m.running = true
+			m.UpdateViewport()
+			return m, readNextEvent(m.runner)
+		}
+		if !msg.WaitingMore {
+			m.running = false
+			if m.serverMode {
+				return m, readNextEvent(m.runner)
+			}
 			return m, nil
 		}
-
 		m.data.add(msg.Event)
-
 		m.UpdateViewport()
-
 		return m, readNextEvent(m.runner)
 	}
 

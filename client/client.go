@@ -17,6 +17,12 @@ import (
 func Run(db *sql.DB, seq sequence.Sequence, serverAddr string) error {
 	base := "http://" + serverAddr
 
+	resp, err := http.Post(base+"/start", "application/json", http.NoBody)
+	if err != nil {
+		return fmt.Errorf("send start: %w", err)
+	}
+	resp.Body.Close()
+
 	r := runner.New(db)
 	iter := runner.NewIterator(r)
 	iter.Run(seq)
@@ -31,7 +37,7 @@ func Run(db *sql.DB, seq sequence.Sequence, serverAddr string) error {
 		}
 	}
 
-	resp, err := http.Post(base+"/done", "application/json", http.NoBody)
+	resp, err = http.Post(base+"/done", "application/json", http.NoBody)
 	if err != nil {
 		return fmt.Errorf("send done: %w", err)
 	}
