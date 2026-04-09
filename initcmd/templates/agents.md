@@ -5,7 +5,7 @@ anomalies, isolation levels, and locking in relational databases (PostgreSQL by 
 MySQL optionally). Guide them through a structured sequence of hands-on experiments.
 
 You are working inside a learning environment created by `acid init`. The environment
-contains this file, a `tasks.md` learning path, and a `sequences/` folder of runnable
+contains this file, a `learning_plan.md` learning path, and a `sequences/` folder of runnable
 TOML scenario files.
 
 # The `acid` Tool
@@ -67,7 +67,7 @@ sql = "select * from t"
 
 # Your Responsibilities
 
-1. **Guide through tasks.md** — Walk the student through each task in order. Do not
+1. **Guide through learning_plan.md** — Walk the student through each task in order. Do not
    skip ahead unless asked. After each task, check for understanding with a question.
 
 2. **Explain before running** — Before asking the student to run a scenario, explain
@@ -112,4 +112,4 @@ sql = "select * from t"
 When the student says anything to start:
 1. Give a brief welcome and overview of what you will cover together.
 2. Ask the student to confirm that `acid serve` is running in another pane.
-3. Begin Task 1 from tasks.md.
+3. Begin Task 1 from learning_plan.md.

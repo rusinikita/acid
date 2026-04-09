@@ -33,7 +33,7 @@ func Run(args []string) {
 	flat := map[string]string{
 		".env":      "templates/env.example",
 		"agents.md": "templates/agents.md",
-		"tasks.md":  "templates/tasks.md",
+		"learning_plan.md": "templates/learning_plan.md",
 	}
 	for dest, src := range flat {
 		data, _ := templates.ReadFile(src)
@@ -90,8 +90,8 @@ func printSummary(dir string, created []string) {
 	fmt.Printf("  %d. Edit .env with your database connection details\n", step)
 	step++
 	fmt.Printf("  %d. Open two terminal panes:\n", step)
-	fmt.Println("       Run    acid serve")
-	fmt.Println("       Run    claude --system-prompt agents.md")
+	fmt.Println("       FIRST    acid serve")
+	fmt.Println("       SECOND   claude --system-prompt agents.md")
 	step++
 	fmt.Printf("  %d. Say \"Let's start\" — the AI agent will guide you\n", step)
 	step++
