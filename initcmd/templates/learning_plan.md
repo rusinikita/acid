@@ -119,6 +119,26 @@ These are the bugs that happen when isolation is imperfect. Know each one well e
 - **Exclusive lock (X)** — only one holder; blocks both shared and exclusive locks
 - **Row-level vs. table-level** — most databases default to row-level; table locks appear in bulk operations or DDL
 
+**Explicit table-level locking (`LOCK TABLE`):**
+
+PostgreSQL has 8 lock modes, from least to most restrictive:
+
+| Mode | Acquired by | Conflicts with |
+|---|---|---|
+| ACCESS SHARE | `SELECT` | ACCESS EXCLUSIVE only |
+| ROW SHARE | `SELECT FOR UPDATE/SHARE` | EXCLUSIVE, ACCESS EXCLUSIVE |
+| ROW EXCLUSIVE | `INSERT`, `UPDATE`, `DELETE` | SHARE and above |
+| SHARE UPDATE EXCLUSIVE | `VACUUM`, `ANALYZE`, `CREATE INDEX CONCURRENTLY` | SHARE UPDATE EXCLUSIVE and above |
+| SHARE | `CREATE INDEX` | ROW EXCLUSIVE and above |
+| SHARE ROW EXCLUSIVE | `CREATE TRIGGER`, some `ALTER TABLE` | ROW EXCLUSIVE and above |
+| EXCLUSIVE | rarely used explicitly | ROW SHARE and above |
+| ACCESS EXCLUSIVE | `DROP TABLE`, `TRUNCATE`, `ALTER TABLE`, `REINDEX` | everything, including `SELECT` |
+
+Key things to know:
+- Most application queries never need `LOCK TABLE` explicitly — the database acquires the right mode automatically
+- ACCESS EXCLUSIVE is the dangerous one: it blocks even plain `SELECT` and is held by DDL statements like `ALTER TABLE` — this is why schema migrations on live tables cause outages
+- You would use `LOCK TABLE ... IN EXCLUSIVE MODE` explicitly when doing a bulk operation that must prevent any concurrent writes for the duration
+
 **`SELECT FOR UPDATE` and `SELECT FOR SHARE`:**
 - `SELECT FOR UPDATE` acquires an exclusive row lock — blocks other writers and other `SELECT FOR UPDATE` until the transaction commits
 - `SELECT FOR SHARE` acquires a shared row lock — allows other readers, blocks writers
