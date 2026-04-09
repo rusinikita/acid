@@ -2,6 +2,8 @@
 
 A structured curriculum for senior-level engineering interviews. Work through each phase in order. The goal is not memorization — it is being able to reason out loud about trade-offs.
 
+Covers both **PostgreSQL** and **MySQL (InnoDB)**. Where behavior differs between the two, both are explained.
+
 ---
 
 ## Phase 1 — Transaction Fundamentals
@@ -17,10 +19,14 @@ A structured curriculum for senior-level engineering interviews. Work through ea
 - What "all or nothing" means in practice
 - The difference between a statement failing and a transaction being rolled back
 
+**Database differences to know:**
+- Both PostgreSQL and MySQL support `BEGIN` / `COMMIT` / `ROLLBACK`; MySQL also uses `START TRANSACTION` as an alias for `BEGIN`
+- In MySQL, `CREATE TABLE` and other DDL statements implicitly commit the current transaction and cannot be rolled back — PostgreSQL supports transactional DDL
+
 **Interview questions at this level:**
 - What happens if a process crashes mid-transaction?
 - What is auto-commit and when does it matter?
-- Can you roll back a `CREATE TABLE`?
+- Can you roll back a `CREATE TABLE`? (answer differs by database)
 
 > **Note:** `acid` is useful here — run a sequence with an explicit rollback and watch all intermediate writes disappear. Makes "all or nothing" tangible.
 
@@ -92,19 +98,29 @@ These are the bugs that happen when isolation is imperfect. Know each one well e
 | REPEATABLE READ | prevented | prevented | possible |
 | SERIALIZABLE | prevented | prevented | prevented |
 
-**PostgreSQL specifics to know:**
-- PostgreSQL does not implement READ UNCOMMITTED — its minimum is READ COMMITTED
-- PostgreSQL's REPEATABLE READ uses snapshot isolation, which also prevents most phantoms in practice
-- PostgreSQL's SERIALIZABLE uses Serializable Snapshot Isolation (SSI), not traditional locking — it detects conflicts at commit time
+**Database-specific behavior:**
+
+| | PostgreSQL | MySQL (InnoDB) |
+|---|---|---|
+| Default level | READ COMMITTED | REPEATABLE READ |
+| READ UNCOMMITTED | Not implemented (treated as READ COMMITTED) | Supported |
+| REPEATABLE READ | Snapshot isolation — also prevents most phantoms | Gap locks + next-key locks prevent phantoms |
+| SERIALIZABLE | Serializable Snapshot Isolation (SSI) — detects conflicts at commit time | Converts all plain SELECTs to SELECT FOR SHARE |
+
+**MySQL gap locks and next-key locks** *(important — unique to MySQL)*:
+- At REPEATABLE READ, InnoDB locks not just the rows that match a query but also the gaps between them
+- This prevents other transactions from inserting new rows into a range you've already scanned, blocking phantom reads
+- Gap locks can cause unexpected contention and deadlocks that do not occur in PostgreSQL — a common source of production surprises
 
 **Decision guide — when to use each level in production:**
-- **READ COMMITTED** (default): most OLTP workloads, short transactions, accept occasional non-repeatable reads
-- **REPEATABLE READ**: long-running read transactions, reports and analytics, anywhere you need a consistent snapshot across multiple queries
+- **READ COMMITTED** (PostgreSQL default): most OLTP workloads, short transactions, accept occasional non-repeatable reads
+- **REPEATABLE READ** (MySQL default): consistent snapshot across multiple queries; in MySQL also prevents phantoms via gap locks
 - **SERIALIZABLE**: financial systems, inventory allocation, anywhere write skew would be a real bug — accept the throughput cost
 
 **Interview questions at this level:**
 - What is the default isolation level in PostgreSQL? In MySQL?
-- REPEATABLE READ prevents phantom reads in PostgreSQL — why? Does that mean it is equivalent to SERIALIZABLE?
+- REPEATABLE READ prevents phantom reads in PostgreSQL — why? How does MySQL prevent them differently?
+- What is a gap lock? What problem does it solve and what problem can it cause?
 - When would you actually use SERIALIZABLE in production?
 - What anomaly does READ COMMITTED still allow?
 
@@ -119,9 +135,9 @@ These are the bugs that happen when isolation is imperfect. Know each one well e
 - **Exclusive lock (X)** — only one holder; blocks both shared and exclusive locks
 - **Row-level vs. table-level** — most databases default to row-level; table locks appear in bulk operations or DDL
 
-**Explicit table-level locking (`LOCK TABLE`):**
+**Explicit table-level locking:**
 
-PostgreSQL has 8 lock modes, from least to most restrictive:
+*PostgreSQL* has 8 lock modes, from least to most restrictive:
 
 | Mode | Acquired by | Conflicts with |
 |---|---|---|
@@ -134,10 +150,15 @@ PostgreSQL has 8 lock modes, from least to most restrictive:
 | EXCLUSIVE | rarely used explicitly | ROW SHARE and above |
 | ACCESS EXCLUSIVE | `DROP TABLE`, `TRUNCATE`, `ALTER TABLE`, `REINDEX` | everything, including `SELECT` |
 
-Key things to know:
-- Most application queries never need `LOCK TABLE` explicitly — the database acquires the right mode automatically
-- ACCESS EXCLUSIVE is the dangerous one: it blocks even plain `SELECT` and is held by DDL statements like `ALTER TABLE` — this is why schema migrations on live tables cause outages
-- You would use `LOCK TABLE ... IN EXCLUSIVE MODE` explicitly when doing a bulk operation that must prevent any concurrent writes for the duration
+*MySQL* uses a simpler explicit locking model:
+- `LOCK TABLES tbl READ` — shared table lock; other sessions can read but not write
+- `LOCK TABLES tbl WRITE` — exclusive table lock; blocks all other access
+- MySQL also has **Metadata Locks (MDL)**: automatically acquired on any table access; DDL waits for all active transactions on the table to finish before proceeding
+
+Key things to know (both databases):
+- Most application queries never need explicit `LOCK TABLE` — the database acquires the right mode automatically
+- In PostgreSQL, ACCESS EXCLUSIVE (held by `ALTER TABLE`) blocks even plain `SELECT` — this is why schema migrations on live tables cause outages
+- In MySQL, DDL waits for MDL, which means a single long-running transaction can block an `ALTER TABLE` which then blocks all subsequent queries on that table (lock queue)
 
 **`SELECT FOR UPDATE` and `SELECT FOR SHARE`:**
 - `SELECT FOR UPDATE` acquires an exclusive row lock — blocks other writers and other `SELECT FOR UPDATE` until the transaction commits
@@ -174,11 +195,21 @@ WHERE id = 1 AND version = <version_you_read>;
 
 **Advisory Locks:**
 - Application-level named locks provided by the database — the database enforces mutual exclusion but assigns no meaning to the lock key; semantics are entirely defined by the application
+- Use cases: ensure only one worker processes a job at a time, prevent concurrent cron job execution, coordinate distributed processes that share a database without a dedicated lock service
+
+*PostgreSQL*:
 - `pg_advisory_lock(key)` — session-level exclusive lock, held until explicitly released or session ends
 - `pg_advisory_xact_lock(key)` — transaction-level exclusive lock, released automatically on commit/rollback
 - `pg_try_advisory_lock(key)` — non-blocking variant, returns `true` if acquired, `false` if already held
 - Shared variants exist: `pg_advisory_lock_shared`, `pg_advisory_xact_lock_shared`
-- Use cases: ensure only one worker processes a job at a time, prevent concurrent cron job execution, coordinate distributed processes that share a database without a dedicated lock service
+- Key is an integer (or two integers)
+
+*MySQL*:
+- `GET_LOCK('name', timeout)` — acquires a named string lock; `timeout = 0` is non-blocking, `-1` waits forever
+- `RELEASE_LOCK('name')` — explicitly releases the lock
+- `IS_FREE_LOCK('name')` — check without acquiring
+- Key is an arbitrary string; always session-level (no transaction-level variant)
+- One important difference: in MySQL a session can only hold one named lock at a time in versions before 5.7.5; from 5.7.5 multiple locks are supported
 
 **Interview questions at this level:**
 - When would you use `SELECT FOR UPDATE` instead of an isolation level upgrade?
@@ -234,66 +265,88 @@ Traditional locking means readers block writers and writers block readers. MVCC 
 **How PostgreSQL implements it:**
 - Every row has `xmin` (the transaction that created it) and `xmax` (the transaction that deleted/updated it)
 - A transaction's snapshot defines which `xmin`/`xmax` values it can see
-- When a row is updated, the old version is kept; a new version is written
+- When a row is updated, the old version is kept in the heap; a new version is written alongside it
 - No dirty reads by design — you only see committed versions
 - Readers never block writers; writers never block readers
 
-**VACUUM and dead tuples:**
-- Old row versions are not immediately deleted — they remain as "dead tuples"
+**VACUUM and dead tuples (PostgreSQL):**
+- Old row versions are not immediately deleted — they remain as "dead tuples" in the heap
 - `VACUUM` reclaims space by removing dead tuples that no active snapshot needs
 - `autovacuum` runs automatically; in write-heavy tables it may need tuning
 - Long-running transactions can prevent VACUUM from removing old versions → table bloat
 
+**How MySQL (InnoDB) implements it:**
+- Old row versions are stored in the **undo log**, not in the main table heap
+- Each row in the heap has a pointer to its undo log chain; a transaction follows the chain to find the version it should see
+- InnoDB has a background **purge thread** that cleans up undo log entries no longer needed by any active transaction — there is no manual `VACUUM`
+- Long-running transactions cause undo log growth (similar problem to PostgreSQL bloat, different mechanism)
+
 **Snapshot isolation vs. Serializable:**
-- Snapshot isolation (REPEATABLE READ in PostgreSQL) gives each transaction a consistent snapshot but still allows write skew
-- SSI (SERIALIZABLE in PostgreSQL) adds conflict detection on top of snapshot isolation to catch write skew
+- Snapshot isolation (REPEATABLE READ) gives each transaction a consistent snapshot but still allows write skew
+- PostgreSQL SSI adds conflict detection on top of snapshot isolation to catch write skew
+- MySQL SERIALIZABLE prevents write skew by converting plain SELECTs to SELECT FOR SHARE, which blocks conflicting writes
 
 **Interview questions at this level:**
 - How does MVCC allow readers and writers to not block each other?
-- What is a dead tuple? Why does VACUUM exist?
-- What is a long-running transaction's impact on MVCC storage?
-- What is the difference between snapshot isolation and SERIALIZABLE in PostgreSQL?
+- What is a dead tuple in PostgreSQL? What is the equivalent in MySQL?
+- What is a long-running transaction's impact on MVCC storage in each database?
+- What is the difference between snapshot isolation and SERIALIZABLE?
 
-> **Note:** `acid` can show that a reader and writer run concurrently without blocking — which is the observable effect of MVCC. It can't show internals: `xmin`/`xmax` values, dead tuples, or VACUUM. For those, use `psql` and query system columns directly.
+> **Note:** `acid` can show that a reader and writer run concurrently without blocking — which is the observable effect of MVCC. It can't show internals: `xmin`/`xmax` values, undo log chains, dead tuples, or VACUUM. For those, use `psql`/`mysql` and query system tables directly.
 
 ---
 
 ## Phase 8 — Durability & Write-Ahead Logging
 
-**Write-Ahead Logging (WAL):**
-- Before any data page is modified on disk, the change is written to the WAL log first
-- On crash, the database replays the WAL to recover committed transactions and discard uncommitted ones
-- This is how the D in ACID is guaranteed — even if the process crashes between writing the WAL and flushing the data page, recovery replays the log
+**The concept (both databases):**
+- Before any data page is modified on disk, the change is written to a log first
+- On crash, the database replays the log to recover committed transactions and discard uncommitted ones
+- This guarantees the D in ACID — even if the process crashes mid-write, recovery restores a consistent state
 
-**What to know for interviews:**
-- WAL enables both crash recovery and replication (streaming replication sends WAL to replicas)
-- `fsync` must be on for durability guarantees — disabling it makes writes faster but you can lose committed data on a crash
-- `synchronous_commit` controls whether a commit waits for WAL to flush to disk
+**PostgreSQL — WAL (Write-Ahead Log):**
+- Single unified log used for both crash recovery and replication (streaming replication ships WAL segments to replicas)
+- `fsync` must be on — disabling it risks losing committed data on a crash
+- `synchronous_commit` controls whether a commit waits for WAL to flush to disk (setting to `off` improves latency at the cost of potential data loss on crash)
+
+**MySQL — Redo Log + Binary Log:**
+- InnoDB uses a **redo log** for crash recovery (equivalent role to PostgreSQL's WAL)
+- MySQL also has a separate **binary log (binlog)** used for replication and point-in-time recovery — it is engine-agnostic and logs logical operations, not physical page changes
+- `innodb_flush_log_at_trx_commit` controls durability: `1` (default) = flush on every commit; `2` = flush once per second; `0` = no flush (fastest, least safe)
+- Replication in MySQL sends binlog events to replicas, not redo log — this is architecturally different from PostgreSQL
 
 **Interview questions at this level:**
 - How does a database guarantee durability after a crash?
-- What is the role of WAL in replication?
+- What is the difference between PostgreSQL WAL and MySQL binlog?
+- What does `innodb_flush_log_at_trx_commit=2` mean in MySQL? What do you risk?
 - What happens if you set `fsync=off` in PostgreSQL?
 
-> **Note:** `acid` can't help here. WAL and crash recovery are storage-layer concepts — demonstrating them requires crashing the database process or inspecting WAL files. Use PostgreSQL docs and `pg_waldump` instead.
+> **Note:** `acid` can't help here. WAL and crash recovery are storage-layer concepts — demonstrating them requires crashing the database process or inspecting log files. Use PostgreSQL docs / `pg_waldump` or MySQL docs / `mysqlbinlog` instead.
 
 ---
 
 ## Phase 9 — Production Patterns & Diagnostics
 
 **Diagnosing lock contention:**
+
+*PostgreSQL:*
 - `pg_locks` — shows currently held locks
 - `pg_stat_activity` — shows active queries; `wait_event_type = 'Lock'` means a query is blocked
-- Long-running transactions visible in `pg_stat_activity` → often the root cause of contention
-
-**Diagnosing slow queries caused by locks:**
 - Find blocking query: join `pg_locks` with `pg_stat_activity` on `pid`
-- Common cause: a forgotten open transaction (e.g., an idle connection mid-transaction)
+
+*MySQL:*
+- `SHOW ENGINE INNODB STATUS` — shows the latest deadlock, current lock waits, and transaction list
+- `performance_schema.data_locks` (MySQL 8.0+) — equivalent to `pg_locks`, shows row and table locks
+- `performance_schema.data_lock_waits` — shows which transaction is blocking which
+- `SHOW PROCESSLIST` or `performance_schema.processlist` — equivalent to `pg_stat_activity`
+
+Common cause in both: a forgotten open transaction (idle-in-transaction connection) holding locks
 
 **Idempotency and retries:**
 - When a transaction is rolled back (e.g., deadlock victim), the application must retry
 - Retried operations must be idempotent — running them twice produces the same result
-- Use unique constraints, conditional inserts (`INSERT ... ON CONFLICT`), and version checks to enforce idempotency
+- PostgreSQL: `INSERT ... ON CONFLICT DO UPDATE/NOTHING`
+- MySQL: `INSERT ... ON DUPLICATE KEY UPDATE` or `REPLACE INTO`
+- Both: version column checks in UPDATE for optimistic locking
 
 **Distributed transactions (awareness level for senior interviews):**
 - **2-Phase Commit (2PC)**: coordinator asks all participants to prepare, then commits if all agree — synchronous, strong consistency, but slow and coordinator is a single point of failure
@@ -330,12 +383,12 @@ Given a business requirement (e.g., "transfer money between two accounts safely"
 - [ ] Can explain all four ACID properties with concrete examples
 - [ ] Can describe all five concurrency anomalies (including write skew) with scenarios
 - [ ] Can state what each isolation level prevents and allows
-- [ ] Knows PostgreSQL's default isolation level and its MVCC behavior
+- [ ] Knows the default isolation level in PostgreSQL (READ COMMITTED) and MySQL (REPEATABLE READ) and why they differ
 - [ ] Can walk through a lost update bug and fix it with `SELECT FOR UPDATE`
 - [ ] Can explain Coffman's four conditions for deadlock
 - [ ] Knows how a database detects and resolves a deadlock
 - [ ] Understands pessimistic vs. optimistic locking trade-offs
-- [ ] Can explain MVCC and why readers don't block writers
-- [ ] Knows what WAL is and how it guarantees durability
+- [ ] Can explain MVCC and why readers don't block writers; knows how PostgreSQL (heap versioning + VACUUM) and MySQL (undo log + purge thread) differ
+- [ ] Knows what WAL is in PostgreSQL and what redo log + binlog are in MySQL
 - [ ] Can describe the Saga pattern vs. 2PC at a conceptual level
-- [ ] Can diagnose a blocked query using `pg_locks` and `pg_stat_activity`
+- [ ] Can diagnose a blocked query in PostgreSQL (`pg_locks`, `pg_stat_activity`) and MySQL (`SHOW ENGINE INNODB STATUS`, `performance_schema.data_locks`)
