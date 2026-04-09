@@ -1,0 +1,57 @@
+name = "Non-Repeatable Read"
+description = """
+Transaction 'auditor' reads a row twice within the same transaction.
+Between the two reads, transaction 'cashier' commits an update to that row.
+Under READ COMMITTED (PostgreSQL default), the auditor sees the new value on
+the second read — a non-repeatable read.
+Under REPEATABLE READ isolation, both reads return the same snapshot.
+"""
+learning_links = [
+  "https://en.wikipedia.org/wiki/Isolation_(database_systems)#Non-repeatable_reads",
+]
+
+[[steps]]
+sql   = "drop table if exists prices"
+setup = true
+
+[[steps]]
+sql   = "create table prices (id integer primary key, product text not null, price integer not null)"
+setup = true
+
+[[steps]]
+sql   = "insert into prices (id, product, price) values (1, 'widget', 100)"
+setup = true
+
+[[steps]]
+cmd = "begin"
+trx = "auditor"
+
+[[steps]]
+cmd = "begin"
+trx = "cashier"
+
+# auditor takes first reading
+[[steps]]
+sql = "select price from prices where id = 1"
+trx = "auditor"
+
+# cashier updates and commits
+[[steps]]
+sql = "update prices set price = 200 where id = 1"
+trx = "cashier"
+
+[[steps]]
+cmd = "commit"
+trx = "cashier"
+
+# auditor reads again — same query, different result under READ COMMITTED
+[[steps]]
+sql = "select price from prices where id = 1"
+trx = "auditor"
+
+[[steps]]
+cmd = "commit"
+trx = "auditor"
+
+[[steps]]
+sql = "select * from prices"

@@ -1,0 +1,56 @@
+name = "Phantom Read"
+description = """
+Transaction 'reporter' counts active users twice.
+Between the two counts, transaction 'admin' inserts a new active user and commits.
+Under READ COMMITTED, the reporter sees a higher count on the second read — a phantom row.
+Under SERIALIZABLE or REPEATABLE READ with predicate locks, it would not.
+"""
+learning_links = [
+  "https://en.wikipedia.org/wiki/Isolation_(database_systems)#Phantom_reads",
+]
+
+[[steps]]
+sql   = "drop table if exists users"
+setup = true
+
+[[steps]]
+sql   = "create table users (id serial primary key, name text not null, active boolean not null default true)"
+setup = true
+
+[[steps]]
+sql   = "insert into users (name, active) values ('alice', true), ('bob', true)"
+setup = true
+
+[[steps]]
+cmd = "begin"
+trx = "reporter"
+
+[[steps]]
+cmd = "begin"
+trx = "admin"
+
+# reporter counts active users — sees 2
+[[steps]]
+sql = "select count(*) from users where active = true"
+trx = "reporter"
+
+# admin inserts a new active user and commits
+[[steps]]
+sql = "insert into users (name, active) values ('carol', true)"
+trx = "admin"
+
+[[steps]]
+cmd = "commit"
+trx = "admin"
+
+# reporter counts again — phantom row makes it 3 under READ COMMITTED
+[[steps]]
+sql = "select count(*) from users where active = true"
+trx = "reporter"
+
+[[steps]]
+cmd = "commit"
+trx = "reporter"
+
+[[steps]]
+sql = "select * from users"

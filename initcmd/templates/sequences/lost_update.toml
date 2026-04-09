@@ -1,0 +1,58 @@
+name = "Lost Update"
+description = """
+Two transactions read the same account balance and each deduct $100.
+Only one deduction is recorded — the other is silently lost.
+Watch what the final balance is versus what you expected.
+"""
+learning_links = [
+  "https://en.wikipedia.org/wiki/Write%E2%80%93write_conflict",
+]
+
+[[steps]]
+sql   = "drop table if exists accounts"
+setup = true
+
+[[steps]]
+sql   = "create table accounts (id integer primary key, owner text not null, balance integer not null)"
+setup = true
+
+[[steps]]
+sql   = "insert into accounts (id, owner, balance) values (1, 'alice', 1000)"
+setup = true
+
+[[steps]]
+cmd = "begin"
+trx = "alice"
+
+[[steps]]
+cmd = "begin"
+trx = "bob"
+
+[[steps]]
+sql = "select balance from accounts where id = 1"
+trx = "alice"
+
+[[steps]]
+sql = "select balance from accounts where id = 1"
+trx = "bob"
+
+# alice read 1000, deducts 100
+[[steps]]
+sql = "update accounts set balance = 900 where id = 1"
+trx = "alice"
+
+# bob also read 1000, deducts 100 — but overwrites alice's write
+[[steps]]
+sql = "update accounts set balance = 900 where id = 1"
+trx = "bob"
+
+[[steps]]
+cmd = "commit"
+trx = "alice"
+
+[[steps]]
+cmd = "commit"
+trx = "bob"
+
+[[steps]]
+sql = "select * from accounts"

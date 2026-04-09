@@ -1,0 +1,54 @@
+name = "Dirty Read"
+description = """
+Transaction 'writer' inserts a row but has not committed yet.
+Transaction 'reader' tries to select that row.
+On PostgreSQL (READ COMMITTED default), the reader sees nothing.
+On READ UNCOMMITTED it would see the uncommitted row.
+What does the final select show after the writer rolls back?
+"""
+learning_links = [
+  "https://en.wikipedia.org/wiki/Isolation_(database_systems)#Dirty_reads",
+]
+
+[[steps]]
+sql   = "drop table if exists orders"
+setup = true
+
+[[steps]]
+sql   = "create table orders (id serial primary key, customer text not null, amount integer not null)"
+setup = true
+
+[[steps]]
+sql   = "insert into orders (customer, amount) values ('initial_customer', 500)"
+setup = true
+
+[[steps]]
+cmd = "begin"
+trx = "writer"
+
+[[steps]]
+cmd = "begin"
+trx = "reader"
+
+# writer inserts a new order — NOT YET COMMITTED
+[[steps]]
+sql = "insert into orders (customer, amount) values ('dirty_customer', 999)"
+trx = "writer"
+
+# reader tries to see the uncommitted row
+[[steps]]
+sql = "select * from orders"
+trx = "reader"
+
+# writer rolls back — the inserted row never existed
+[[steps]]
+cmd = "rollback"
+trx = "writer"
+
+[[steps]]
+cmd = "commit"
+trx = "reader"
+
+# confirm final state — dirty_customer should not be present
+[[steps]]
+sql = "select * from orders"
