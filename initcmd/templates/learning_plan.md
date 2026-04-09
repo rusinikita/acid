@@ -152,13 +152,23 @@ WHERE id = 1 AND version = <version_you_read>;
 -- If 0 rows updated → someone else changed it → retry
 ```
 
+**Advisory Locks:**
+- Application-level named locks provided by the database — the database enforces mutual exclusion but assigns no meaning to the lock key; semantics are entirely defined by the application
+- `pg_advisory_lock(key)` — session-level exclusive lock, held until explicitly released or session ends
+- `pg_advisory_xact_lock(key)` — transaction-level exclusive lock, released automatically on commit/rollback
+- `pg_try_advisory_lock(key)` — non-blocking variant, returns `true` if acquired, `false` if already held
+- Shared variants exist: `pg_advisory_lock_shared`, `pg_advisory_xact_lock_shared`
+- Use cases: ensure only one worker processes a job at a time, prevent concurrent cron job execution, coordinate distributed processes that share a database without a dedicated lock service
+
 **Interview questions at this level:**
 - When would you use `SELECT FOR UPDATE` instead of an isolation level upgrade?
 - What is two-phase locking? Does PostgreSQL use it?
 - Compare pessimistic and optimistic locking — when do you choose each?
 - What happens if you forget `SELECT FOR UPDATE` in a read-then-write transaction?
+- What is an advisory lock? When would you use one instead of a row lock?
+- What is the difference between a session-level and transaction-level advisory lock?
 
-> **Note:** `acid` is useful for `SELECT FOR UPDATE` and optimistic locking — write a TOML where one transaction locks a row and another tries to update it, and watch the second block. 2PL is a theoretical concept; `acid` shows the effects of locking but not the internal protocol.
+> **Note:** `acid` is useful for `SELECT FOR UPDATE`, optimistic locking, and advisory locks — write a TOML where one transaction calls `pg_advisory_xact_lock` and another tries to acquire the same key, and watch the second block. 2PL is a theoretical concept; `acid` shows the effects of locking but not the internal protocol.
 
 ---
 
