@@ -16,7 +16,8 @@ import (
 )
 
 type model struct {
-	runner runner
+	runner   runner
+	toggleCh <-chan struct{}
 
 	running    bool
 	serverMode bool
@@ -67,7 +68,8 @@ func NewRunTable(runner runner, db string, sequences []sequence.Sequence) tea.Mo
 
 // NewServerRunTable creates a run model for server mode. Events are received
 // from the network via source; no local DB connection or sequence selection is needed.
-func NewServerRunTable(source runner, port string) tea.Model {
+// toggleCh fires when the /toggle-mode endpoint is called, switching result visibility.
+func NewServerRunTable(source runner, port string, toggleCh <-chan struct{}) tea.Model {
 	data := &eventData{
 		onlyStepsMode: true,
 		transactions:  []call.TrxID{""},
@@ -77,6 +79,7 @@ func NewServerRunTable(source runner, port string) tea.Model {
 
 	m := &model{
 		runner:     source,
+		toggleCh:   toggleCh,
 		running:    true,
 		serverMode: true,
 
@@ -102,7 +105,7 @@ func NewServerRunTable(source runner, port string) tea.Model {
 
 func (m *model) Init() tea.Cmd {
 	if m.serverMode {
-		return readNextEvent(m.runner)
+		return tea.Batch(readNextEvent(m.runner), waitForToggle(m.toggleCh))
 	}
 	return nil
 }
@@ -118,6 +121,15 @@ func readNextEvent(r runner) func() tea.Msg {
 	}
 }
 
+type toggleModeMsg struct{}
+
+func waitForToggle(ch <-chan struct{}) tea.Cmd {
+	return func() tea.Msg {
+		<-ch
+		return toggleModeMsg{}
+	}
+}
+
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
@@ -129,7 +141,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, router.Route("list")
 		}
 
-		if key.Matches(msg, theme.DefaultKB.Mode) {
+		if !m.serverMode && key.Matches(msg, theme.DefaultKB.Mode) {
 			m.data.onlyStepsMode = !m.data.onlyStepsMode
 			m.vp.YOffset = 0
 			m.UpdateViewport()
@@ -163,6 +175,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		return m, tea.Sequence(run, readNextEvent(m.runner))
+	case toggleModeMsg:
+		m.data.onlyStepsMode = !m.data.onlyStepsMode
+		m.vp.YOffset = 0
+		m.UpdateViewport()
+		return m, waitForToggle(m.toggleCh)
 	case newEvent:
 		if msg.Event.IsStart() {
 			m.data.clean()
@@ -206,7 +223,11 @@ func (m *model) View() string {
 		return "Waiting for connection on " + m.db + "...\n\nPress q to quit."
 	}
 
-	menu := "  " + m.help.ShortHelpView(theme.DefaultKB.Menu())
+	menuBindings := theme.DefaultKB.Menu()
+	if m.serverMode {
+		menuBindings = theme.DefaultKB.ServerMenu()
+	}
+	menu := "  " + m.help.ShortHelpView(menuBindings)
 	dbLabel := fmt.Sprint("seq ", m.currentSequence+1, " ", m.db)
 	dbLabelLen := len(dbLabel)
 	dbLabel = theme.StatusLineStyle.Render(dbLabel)

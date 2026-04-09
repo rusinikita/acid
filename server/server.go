@@ -2,28 +2,40 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
+	"sync"
 
 	"github.com/rusinikita/acid/event"
 	"github.com/rusinikita/acid/protocol"
 )
 
 // Server is an HTTP server that receives events from a remote client.
-// GET  /health  — liveness probe
-// POST /event   — deliver one event (JSON body: protocol.EventMessage)
-// POST /done    — signal end of stream; closes the event channel
+// GET  /health        — liveness probe
+// POST /event         — deliver one event (JSON body: protocol.EventMessage)
+// POST /done          — signal end of stream; closes the event channel
+// POST /toggle-mode   — toggle result visibility on the server TUI
 type Server struct {
-	addr  string
-	bound string
-	ch    chan event.Event
+	addr     string
+	bound    string
+	ch       chan event.Event
+	toggleCh chan struct{}
+	mu       sync.Mutex
+	visible  bool // false = hidden (onlyStepsMode=true), true = visible
 }
 
 func New(addr string) *Server {
 	return &Server{
-		addr: addr,
-		ch:   make(chan event.Event),
+		addr:     addr,
+		ch:       make(chan event.Event),
+		toggleCh: make(chan struct{}, 1),
 	}
+}
+
+// ToggleCh returns the channel that fires when a /toggle-mode request is received.
+func (s *Server) ToggleCh() <-chan struct{} {
+	return s.toggleCh
 }
 
 // Channel returns the read-only channel that the TUI drains for incoming events.
@@ -65,6 +77,23 @@ func (s *Server) ListenAndServe() error {
 	mux.HandleFunc("POST /done", func(w http.ResponseWriter, r *http.Request) {
 		s.ch <- event.Done()
 		w.WriteHeader(http.StatusOK)
+	})
+	mux.HandleFunc("POST /toggle-mode", func(w http.ResponseWriter, r *http.Request) {
+		s.mu.Lock()
+		select {
+		case s.toggleCh <- struct{}{}:
+			s.visible = !s.visible
+			v := s.visible
+			s.mu.Unlock()
+			from, to := "hidden", "visible"
+			if !v {
+				from, to = "visible", "hidden"
+			}
+			fmt.Fprintf(w, "toggled: %s -> %s", from, to)
+		default:
+			s.mu.Unlock()
+			http.Error(w, "toggle already pending", http.StatusConflict)
+		}
 	})
 
 	go func() { _ = http.Serve(ln, mux) }()

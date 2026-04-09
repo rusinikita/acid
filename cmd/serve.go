@@ -39,7 +39,7 @@ func runServe() {
 	source := runner.NewChannelSource(srv.Channel())
 
 	routes := map[string]tea.Model{
-		"run": run.NewServerRunTable(source, port),
+		"run": run.NewServerRunTable(source, port, srv.ToggleCh()),
 	}
 
 	app := router.NewRouter(routes, router.Route("run"))
