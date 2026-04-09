@@ -1,20 +1,24 @@
 package server
 
 import (
-	"bufio"
-	"io"
-	"log"
+	"encoding/json"
 	"net"
+	"net/http"
+	"sync"
 
 	"github.com/rusinikita/acid/event"
 	"github.com/rusinikita/acid/protocol"
 )
 
-// Server listens for a single TCP client connection and forwards events to a channel.
+// Server is an HTTP server that receives events from a remote client.
+// GET  /health  — liveness probe
+// POST /event   — deliver one event (JSON body: protocol.EventMessage)
+// POST /done    — signal end of stream; closes the event channel
 type Server struct {
-	addr  string
-	bound string
-	ch    chan event.Event
+	addr      string
+	bound     string
+	ch        chan event.Event
+	closeOnce sync.Once
 }
 
 func New(addr string) *Server {
@@ -29,14 +33,13 @@ func (s *Server) Channel() <-chan event.Event {
 	return s.ch
 }
 
-// Addr returns the actual bound address (e.g. "127.0.0.1:14322").
+// Addr returns the actual bound address (e.g. "127.0.0.1:7331").
 // Only valid after ListenAndServe returns without error.
 func (s *Server) Addr() string {
 	return s.bound
 }
 
-// ListenAndServe binds to the address and accepts one client in a background goroutine.
-// It returns as soon as the listener is bound.
+// ListenAndServe binds and starts the HTTP server in a background goroutine.
 func (s *Server) ListenAndServe() error {
 	ln, err := net.Listen("tcp", s.addr)
 	if err != nil {
@@ -44,33 +47,25 @@ func (s *Server) ListenAndServe() error {
 	}
 	s.bound = ln.Addr().String()
 
-	go func() {
-		defer ln.Close()
-		defer close(s.ch)
-
-		conn, err := ln.Accept()
-		if err != nil {
-			log.Printf("server accept: %v", err)
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	mux.HandleFunc("POST /event", func(w http.ResponseWriter, r *http.Request) {
+		var msg protocol.EventMessage
+		if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		defer conn.Close()
+		s.ch <- protocol.Unmarshal(msg)
+		w.WriteHeader(http.StatusOK)
+	})
+	mux.HandleFunc("POST /done", func(w http.ResponseWriter, r *http.Request) {
+		s.closeOnce.Do(func() { close(s.ch) })
+		w.WriteHeader(http.StatusOK)
+	})
 
-		s.readEvents(conn)
-	}()
+	go func() { _ = http.Serve(ln, mux) }()
 
 	return nil
-}
-
-func (s *Server) readEvents(r io.Reader) {
-	br := bufio.NewReader(r)
-	for {
-		e, err := protocol.ReadEvent(br)
-		if err != nil {
-			if err != io.EOF {
-				log.Printf("server read: %v", err)
-			}
-			return
-		}
-		s.ch <- e
-	}
 }

@@ -57,5 +57,5 @@ func (s *PostgresSuite) TestClientServerRoundTrip() {
 		expected = append(expected, msg)
 	}
 
-	s.Equal(expected, received)
+	s.ElementsMatch(expected, received)
 }

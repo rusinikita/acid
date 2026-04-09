@@ -1,23 +1,21 @@
 package client
 
 import (
+	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
-	"net"
+	"net/http"
 
 	"github.com/rusinikita/acid/protocol"
 	"github.com/rusinikita/acid/runner"
 	"github.com/rusinikita/acid/sequence"
 )
 
-// Run connects to the server at serverAddr, executes seq against db,
-// and streams events to the server for visualization.
+// Run connects to the acid server at serverAddr, executes seq against db,
+// and POSTs each event to the server for visualization.
 func Run(db *sql.DB, seq sequence.Sequence, serverAddr string) error {
-	conn, err := net.Dial("tcp", serverAddr)
-	if err != nil {
-		return fmt.Errorf("connect to server %s: %w", serverAddr, err)
-	}
-	defer conn.Close()
+	base := "http://" + serverAddr
 
 	r := runner.New(db)
 	iter := runner.NewIterator(r)
@@ -28,10 +26,31 @@ func Run(db *sql.DB, seq sequence.Sequence, serverAddr string) error {
 		if !ok {
 			break
 		}
-		if err := protocol.WriteEvent(conn, e); err != nil {
-			return fmt.Errorf("send event: %w", err)
+		if err := postEvent(base, protocol.Marshal(e)); err != nil {
+			return err
 		}
 	}
 
+	resp, err := http.Post(base+"/done", "application/json", http.NoBody)
+	if err != nil {
+		return fmt.Errorf("send done: %w", err)
+	}
+	resp.Body.Close()
+	return nil
+}
+
+func postEvent(base string, msg protocol.EventMessage) error {
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("marshal event: %w", err)
+	}
+	resp, err := http.Post(base+"/event", "application/json", bytes.NewReader(data))
+	if err != nil {
+		return fmt.Errorf("send event: %w", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("server returned %d", resp.StatusCode)
+	}
 	return nil
 }
