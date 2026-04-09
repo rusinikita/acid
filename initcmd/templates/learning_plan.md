@@ -19,14 +19,32 @@ Covers both **PostgreSQL** and **MySQL (InnoDB)**. Where behavior differs betwee
 - What "all or nothing" means in practice
 - The difference between a statement failing and a transaction being rolled back
 
+**Nested transactions:**
+- True nested transactions (a transaction inside a transaction) are not supported by PostgreSQL or MySQL
+- **Savepoints** are the practical substitute: mark a point within a transaction that you can roll back to without aborting the whole transaction (`SAVEPOINT name` / `ROLLBACK TO SAVEPOINT name` / `RELEASE SAVEPOINT name`)
+- Application-level "nested transaction" abstractions (e.g., in ORMs) typically use savepoints under the hood
+
+**Implicit commits in MySQL:**
+Certain statements automatically commit the current transaction before executing. If you have open changes, they are committed without warning:
+- All DDL: `CREATE`, `ALTER`, `DROP`, `RENAME`, `TRUNCATE TABLE`
+- `LOCK TABLES`, `UNLOCK TABLES`
+- `BEGIN` (starting a new transaction commits the previous one)
+- Administration statements: `ANALYZE TABLE`, `OPTIMIZE TABLE`, `REPAIR TABLE`
+- PostgreSQL does not have implicit commits — DDL is fully transactional
+
+**Which operations cannot be rolled back:**
+- **MySQL**: any DDL statement (see implicit commits above); also `TRUNCATE TABLE` — it is DDL in MySQL, not DML
+- **PostgreSQL**: almost everything can be rolled back, including DDL; exceptions are operations outside the transaction scope (e.g., sequences, `pg_sleep`, external side effects)
+
 **Database differences to know:**
 - Both PostgreSQL and MySQL support `BEGIN` / `COMMIT` / `ROLLBACK`; MySQL also uses `START TRANSACTION` as an alias for `BEGIN`
-- In MySQL, `CREATE TABLE` and other DDL statements implicitly commit the current transaction and cannot be rolled back — PostgreSQL supports transactional DDL
 
 **Interview questions at this level:**
 - What happens if a process crashes mid-transaction?
 - What is auto-commit and when does it matter?
 - Can you roll back a `CREATE TABLE`? (answer differs by database)
+- What is a savepoint? How does it differ from a nested transaction?
+- In MySQL, which statements cause an implicit commit?
 
 > **Note:** `acid` is useful here — run a sequence with an explicit rollback and watch all intermediate writes disappear. Makes "all or nothing" tangible.
 
@@ -363,6 +381,136 @@ Common cause in both: a forgotten open transaction (idle-in-transaction connecti
 
 ---
 
+## Phase 10 — Indexes
+
+**Purpose:**
+- Indexes allow the database to find rows without scanning the entire table
+- Trade-off: faster reads, slower writes (index must be updated on every INSERT/UPDATE/DELETE), more storage
+
+**Clustered vs. non-clustered:**
+- **Clustered index** — the table data is physically stored in index order; there can be only one per table; a lookup by clustered index key retrieves the row directly
+- **Non-clustered index** — a separate structure that stores index keys and pointers (row IDs or clustered key values) to the actual row; a lookup requires following the pointer after finding the key
+
+*InnoDB (MySQL):*
+- Every InnoDB table has exactly one clustered index — by default the primary key
+- If no primary key is defined, InnoDB picks the first UNIQUE NOT NULL index; if none exists, it creates a hidden 6-byte row ID clustered index
+- All secondary (non-clustered) indexes store the primary key value as their row pointer — so a secondary index lookup first finds the PK, then does a second lookup into the clustered index ("double lookup")
+- An InnoDB table without any user-defined index is valid but uses the hidden clustered index; typically a bad idea for performance
+
+*PostgreSQL:*
+- PostgreSQL does not have clustered indexes in the InnoDB sense — the heap is unordered by default
+- `CLUSTER tbl USING idx` physically reorders the heap once, but the ordering is not maintained on future writes
+- All PostgreSQL indexes are non-clustered by this definition; they store a TID (physical row location) as the pointer
+
+**Interview questions at this level:**
+- What is the difference between a clustered and a non-clustered index?
+- In InnoDB, what happens if you define no primary key?
+- Why does a secondary index lookup in InnoDB require two lookups?
+- Can an InnoDB table exist without indexes? What are the implications?
+
+> **Note:** `acid` can't help here — index behavior requires running queries against real tables and using EXPLAIN to observe access patterns.
+
+---
+
+## Phase 11 — Query Plans
+
+**Getting the query plan:**
+- *MySQL*: `EXPLAIN SELECT ...` — shows the optimizer's plan without executing; `EXPLAIN ANALYZE SELECT ...` (MySQL 8.0+) — executes and shows actual timings
+- *PostgreSQL*: `EXPLAIN SELECT ...` — estimated plan; `EXPLAIN ANALYZE SELECT ...` — executes and shows actual vs. estimated rows and timings
+
+**Key fields in MySQL EXPLAIN output:**
+
+| Field | What to look for |
+|---|---|
+| `type` | Access method — best to worst: `const` → `eq_ref` → `ref` → `range` → `index` → `ALL` |
+| `key` | Which index was used; `NULL` means no index used |
+| `rows` | Estimated rows examined — high numbers signal a performance problem |
+| `Extra` | `Using filesort` and `Using temporary` are warning signs; `Using index` means a covering index (fast) |
+
+**What `type` values mean:**
+- `ALL` — full table scan; almost always bad on large tables
+- `index` — full index scan; better than `ALL` but still reads everything
+- `range` — index range scan; good for `BETWEEN`, `>`, `<`, `IN`
+- `ref` — index lookup for non-unique key; good
+- `eq_ref` — index lookup for unique key (one row result); very good
+- `const` — primary key or unique index with a constant value; optimal
+
+**What to do when you see a bad plan:**
+- `type = ALL` → add an index on the WHERE/JOIN column
+- `Using filesort` → add an index that covers the ORDER BY column
+- `Using temporary` → query uses a temp table (often GROUP BY or DISTINCT without an index)
+- `rows` estimate much higher than actual → stale statistics; run `ANALYZE TABLE` (MySQL) or `ANALYZE` (PostgreSQL)
+
+**Interview questions at this level:**
+- How do you get a query execution plan in MySQL? In PostgreSQL?
+- What does `type = ALL` in MySQL EXPLAIN mean? How do you fix it?
+- What is the difference between `EXPLAIN` and `EXPLAIN ANALYZE`?
+- What does `Using filesort` mean? Is it always a problem?
+
+> **Note:** `acid` can't help here — query plan analysis requires running EXPLAIN against real tables with real data distributions.
+
+---
+
+## Phase 12 — SQL Fundamentals
+
+**TRUNCATE vs. DELETE:**
+
+| | `DELETE` | `TRUNCATE` |
+|---|---|---|
+| Removes rows | One by one, with WHERE support | All rows at once, no WHERE |
+| Transaction-safe | Yes — can be rolled back | MySQL: No (DDL, implicit commit); PostgreSQL: Yes |
+| Triggers | Fires row-level DELETE triggers | Does not fire row-level triggers |
+| Auto-increment reset | No | Yes (resets counter) |
+| Speed | Slower on large tables | Much faster (deallocates pages) |
+| Locks | Row locks | Table lock |
+
+**JOIN types:**
+- **INNER JOIN** — returns only rows with a match in both tables; non-matching rows from either side are excluded
+- **LEFT JOIN** (LEFT OUTER JOIN) — returns all rows from the left table; for rows with no match in the right table, right-side columns are NULL
+- **RIGHT JOIN** (RIGHT OUTER JOIN) — returns all rows from the right table; non-matching left-side columns are NULL; equivalent to swapping table order in a LEFT JOIN
+- **FULL JOIN** (FULL OUTER JOIN) — returns all rows from both tables; NULL fills the side with no match; *MySQL does not support FULL JOIN natively* — emulate with `LEFT JOIN UNION ALL RIGHT JOIN ... WHERE left.id IS NULL`
+- **CROSS JOIN** — cartesian product; every row from the left paired with every row from the right; rarely intentional
+
+**Interview questions at this level:**
+- What is the difference between DELETE and TRUNCATE? Can you roll back TRUNCATE?
+- What does LEFT JOIN return when there is no match on the right side?
+- How do you emulate FULL JOIN in MySQL?
+- Why would TRUNCATE be faster than DELETE on a large table?
+
+> **Note:** `acid` can't help here — these are query-level concepts best practiced in a SQL shell.
+
+---
+
+## Phase 13 — Schema Design & DDL
+
+**Normalization:**
+- The process of structuring tables to reduce redundancy and ensure data integrity
+
+- **1NF (First Normal Form)**: each column holds atomic (indivisible) values; no repeating groups or arrays in a column; each row is uniquely identifiable
+- **2NF (Second Normal Form)**: must be in 1NF; every non-key column must depend on the *whole* primary key — eliminates partial dependencies (relevant when the PK is composite)
+- **3NF (Third Normal Form)**: must be in 2NF; every non-key column must depend *directly* on the primary key, not on another non-key column — eliminates transitive dependencies
+- **BCNF** (Boyce-Codd, awareness level): a stricter form of 3NF; every determinant must be a candidate key
+
+Practical note: full normalization optimizes for write consistency; denormalization (intentionally violating NF rules) optimizes for read performance. Most production schemas are selectively denormalized.
+
+**Instant DDL (MySQL 8.0+):**
+- Traditional `ALTER TABLE` requires rebuilding the entire table — it copies all rows to a new table structure, which is slow and locks the table
+- **Instant DDL** performs the schema change by updating only the table metadata — no row data is touched, making it nearly instantaneous regardless of table size
+- Operations supported for instant DDL (examples): adding a column at the end of the table, changing column default values, renaming columns, adding/dropping virtual columns, changing index visibility
+- Operations that still require a table rebuild: changing a column's data type, adding a column in the middle of the table (in some versions), changing character set
+
+*PostgreSQL equivalent:* some DDL is also instant (e.g., `ALTER TABLE ... ALTER COLUMN ... SET DEFAULT`, `ALTER TABLE ... ADD COLUMN` with a non-volatile default in Postgres 11+); others require a rewrite
+
+**Interview questions at this level:**
+- Explain 1NF, 2NF, and 3NF with an example
+- When would you intentionally denormalize a table?
+- What is Instant DDL in MySQL? Give two examples of operations it supports
+- Why does traditional `ALTER TABLE ADD COLUMN` lock the table? How does Instant DDL avoid this?
+
+> **Note:** `acid` can't help here — schema design and DDL behavior are best explored directly in a MySQL or PostgreSQL shell.
+
+---
+
 ## Capstone — Design a Scenario from Scratch
 
 Given a business requirement (e.g., "transfer money between two accounts safely"), design the complete transaction strategy:
@@ -381,13 +529,22 @@ Given a business requirement (e.g., "transfer money between two accounts safely"
 ## Interview Readiness Checklist
 
 - [ ] Can explain all four ACID properties with concrete examples
+- [ ] Knows which MySQL statements cause implicit commits and which operations cannot be rolled back
+- [ ] Can explain savepoints and how they differ from true nested transactions
 - [ ] Can describe all five concurrency anomalies (including write skew) with scenarios
 - [ ] Can state what each isolation level prevents and allows
 - [ ] Knows the default isolation level in PostgreSQL (READ COMMITTED) and MySQL (REPEATABLE READ) and why they differ
+- [ ] Can explain MySQL gap locks and next-key locks and why they can cause unexpected deadlocks
 - [ ] Can walk through a lost update bug and fix it with `SELECT FOR UPDATE`
 - [ ] Can explain Coffman's four conditions for deadlock
 - [ ] Knows how a database detects and resolves a deadlock
 - [ ] Understands pessimistic vs. optimistic locking trade-offs
+- [ ] Can explain the difference between clustered and non-clustered indexes; knows InnoDB's hidden clustered index behavior
+- [ ] Can read a MySQL EXPLAIN output and identify full table scans, missing indexes, and filesort
+- [ ] Knows the difference between DELETE and TRUNCATE (transaction safety, triggers, speed)
+- [ ] Can explain all four JOIN types and knows FULL JOIN is not natively supported in MySQL
+- [ ] Can explain 1NF, 2NF, and 3NF with a concrete example
+- [ ] Knows what Instant DDL is in MySQL and can give examples of instant vs. rebuild operations
 - [ ] Can explain MVCC and why readers don't block writers; knows how PostgreSQL (heap versioning + VACUUM) and MySQL (undo log + purge thread) differ
 - [ ] Knows what WAL is in PostgreSQL and what redo log + binlog are in MySQL
 - [ ] Can describe the Saga pattern vs. 2PC at a conceptual level
