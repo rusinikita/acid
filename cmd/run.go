@@ -33,6 +33,11 @@ func init() {
 func runClient(args []string) {
 	var seq sequence.Sequence
 
+	if runFilePath == "" && len(args) > 0 && filepath.Ext(args[0]) == ".toml" {
+		runFilePath = args[0]
+		args = nil
+	}
+
 	if runFilePath != "" {
 		db.LoadEnv(filepath.Dir(runFilePath))
 		var err error
