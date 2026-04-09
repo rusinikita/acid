@@ -26,3 +26,12 @@ stopdb:
 
 run:
 	go run main.go
+
+# Create and push a new tag: make tag VERSION=v0.1.0
+tag:
+	git tag $(VERSION)
+	git push origin $(VERSION)
+
+# Build and release with goreleaser (requires GITHUB_TOKEN)
+release:
+	goreleaser release --clean
