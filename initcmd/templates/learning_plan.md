@@ -22,6 +22,8 @@ A structured curriculum for senior-level engineering interviews. Work through ea
 - What is auto-commit and when does it matter?
 - Can you roll back a `CREATE TABLE`?
 
+> **Note:** `acid` is useful here — run a sequence with an explicit rollback and watch all intermediate writes disappear. Makes "all or nothing" tangible.
+
 ---
 
 ## Phase 2 — ACID Properties
@@ -41,6 +43,8 @@ A structured curriculum for senior-level engineering interviews. Work through ea
 - Give me a real example where violating atomicity causes a bug
 - What does "consistency" actually mean — who is responsible for it?
 - Why is full isolation expensive?
+
+> **Note:** `acid` is useful for Atomicity (watch a rollback undo everything) and Isolation (anomaly sequences in Phase 3). Not useful for Consistency or Durability — those require constraint testing and crash recovery, which `acid` doesn't do.
 
 ---
 
@@ -73,6 +77,8 @@ These are the bugs that happen when isolation is imperfect. Know each one well e
 - What is write skew? Give me an example
 - Which anomalies can happen at READ COMMITTED?
 
+> **Note:** `acid` is most useful here — built-in sequences exist for dirty read, non-repeatable read, phantom read, and lost update. Use quiz mode (hide results, predict the output, then reveal) to build real intuition. Write skew has no built-in sequence but you can write one as a TOML.
+
 ---
 
 ## Phase 4 — Isolation Levels
@@ -101,6 +107,8 @@ These are the bugs that happen when isolation is imperfect. Know each one well e
 - REPEATABLE READ prevents phantom reads in PostgreSQL — why? Does that mean it is equivalent to SERIALIZABLE?
 - When would you actually use SERIALIZABLE in production?
 - What anomaly does READ COMMITTED still allow?
+
+> **Note:** `acid` is useful here — take any anomaly sequence from Phase 3, add `SET TRANSACTION ISOLATION LEVEL REPEATABLE READ` as a step, re-run, and compare the result. Seeing the same scenario behave differently under a different level is more convincing than a table.
 
 ---
 
@@ -150,6 +158,8 @@ WHERE id = 1 AND version = <version_you_read>;
 - Compare pessimistic and optimistic locking — when do you choose each?
 - What happens if you forget `SELECT FOR UPDATE` in a read-then-write transaction?
 
+> **Note:** `acid` is useful for `SELECT FOR UPDATE` and optimistic locking — write a TOML where one transaction locks a row and another tries to update it, and watch the second block. 2PL is a theoretical concept; `acid` shows the effects of locking but not the internal protocol.
+
 ---
 
 ## Phase 6 — Deadlocks
@@ -182,6 +192,8 @@ All four must hold simultaneously for a deadlock to occur. Prevention strategies
 - How should your application handle the "deadlock detected" error?
 - Two transactions each transfer money between account A and account B but in opposite order — what happens and how do you fix it?
 
+> **Note:** `acid` is useful here — there is a built-in deadlock sequence. You can see which transaction gets picked as the victim and observe the error. The step-by-step TUI makes the circular wait visually obvious.
+
 ---
 
 ## Phase 7 — MVCC (Multi-Version Concurrency Control)
@@ -212,6 +224,8 @@ Traditional locking means readers block writers and writers block readers. MVCC 
 - What is a long-running transaction's impact on MVCC storage?
 - What is the difference between snapshot isolation and SERIALIZABLE in PostgreSQL?
 
+> **Note:** `acid` can show that a reader and writer run concurrently without blocking — which is the observable effect of MVCC. It can't show internals: `xmin`/`xmax` values, dead tuples, or VACUUM. For those, use `psql` and query system columns directly.
+
 ---
 
 ## Phase 8 — Durability & Write-Ahead Logging
@@ -230,6 +244,8 @@ Traditional locking means readers block writers and writers block readers. MVCC 
 - How does a database guarantee durability after a crash?
 - What is the role of WAL in replication?
 - What happens if you set `fsync=off` in PostgreSQL?
+
+> **Note:** `acid` can't help here. WAL and crash recovery are storage-layer concepts — demonstrating them requires crashing the database process or inspecting WAL files. Use PostgreSQL docs and `pg_waldump` instead.
 
 ---
 
@@ -260,6 +276,8 @@ Traditional locking means readers block writers and writers block readers. MVCC 
 - How do you make a payment operation safe to retry?
 - What is the trade-off between 2PC and the Saga pattern?
 
+> **Note:** `acid` can demonstrate a transaction blocking another (open a `BEGIN`, leave it uncommitted, watch a second transaction wait). It can't help with `pg_locks`/`pg_stat_activity` diagnosis, idempotency patterns, or distributed transactions — use `psql` and real application code for those.
+
 ---
 
 ## Capstone — Design a Scenario from Scratch
@@ -272,6 +290,8 @@ Given a business requirement (e.g., "transfer money between two accounts safely"
 4. Define the exact SQL, including `SELECT FOR UPDATE` if needed
 5. Handle the error cases: deadlock, serialization failure, constraint violation
 6. Explain what happens under high concurrency
+
+> **Note:** `acid` is the right tool here — write the scenario as a TOML, run it, and verify your predictions match reality.
 
 ---
 
