@@ -43,10 +43,11 @@ prediction-first learning.
 name = "Scenario Name"
 description = "What this scenario demonstrates"
 learning_links = ["https://..."]   # optional
+drop_tables = ["t"]                # dropped before steps run; omit or [] for no cleanup
 
 [[steps]]
-sql   = "drop table if exists t"
-setup = true    # setup steps are hidden by default in the TUI (press 's' to reveal)
+sql   = "create table t (...)"
+setup = true    # setup steps are shown automatically in server mode; press 's' to toggle
 
 [[steps]]
 cmd = "begin"   # begin | commit | rollback

@@ -9,9 +9,7 @@ learning_links = [
   "https://en.wikipedia.org/wiki/Isolation_(database_systems)#Phantom_reads",
 ]
 
-[[steps]]
-sql   = "drop table if exists users"
-setup = true
+drop_tables = ["users"]
 
 [[steps]]
 sql   = "create table users (id serial primary key, name text not null, active boolean not null default true)"

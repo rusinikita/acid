@@ -15,12 +15,12 @@ var TrxSpeech = []Sequence{
 	{
 		Name:        "Lost Update example",
 		Description: "There is a potential bug",
+		DropTables:  []string{"speaker_slots"},
 		Calls: []call.Step{
-			call.Setup("drop table if exists speaker_slots"),
 			call.Setup(`CREATE TABLE speaker_slots (
-    meetup_id INTEGER NOT NULL, 
+    meetup_id INTEGER NOT NULL,
     speaker_id INTEGER DEFAULT NULL,
-    start_time INTEGER NOT NULL DEFAULT 1, 
+    start_time INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     PRIMARY KEY(meetup_id, start_time)
 )`),
@@ -40,12 +40,12 @@ var TrxSpeech = []Sequence{
 	{
 		Name:        "Lost Update fix",
 		Description: "Fix lost update",
+		DropTables:  []string{"speaker_slots"},
 		Calls: []call.Step{
-			call.Setup("drop table if exists speaker_slots"),
 			call.Setup(`CREATE TABLE speaker_slots (
-    meetup_id INTEGER NOT NULL, 
+    meetup_id INTEGER NOT NULL,
     speaker_id INTEGER DEFAULT NULL,
-    start_time INTEGER NOT NULL DEFAULT 1, 
+    start_time INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     PRIMARY KEY(meetup_id, start_time)
 )`),
@@ -66,9 +66,8 @@ var TrxSpeech = []Sequence{
 	{
 		Name:        "INSERT constraint err example",
 		Description: "Shows how error appear during transaction",
+		DropTables:  []string{"visitors", "meetups"},
 		Calls: []call.Step{
-			call.Setup("drop table if exists meetups"),
-			call.Setup("drop table if exists visitors"),
 			call.Setup(`CREATE TABLE meetups (
     id SERIAL NOT NULL PRIMARY KEY,
     name TEXT NOT NULL,
@@ -101,9 +100,8 @@ var TrxSpeech = []Sequence{
 	{
 		Name:        "INSERT check constraint err example",
 		Description: "Shows how error appear during transaction",
+		DropTables:  []string{"visitors", "meetups"},
 		Calls: []call.Step{
-			call.Setup("drop table if exists meetups"),
-			call.Setup("drop table if exists visitors"),
 			call.Setup(`CREATE TABLE meetups (
     id SERIAL NOT NULL PRIMARY KEY,
     name TEXT NOT NULL,
@@ -140,8 +138,8 @@ var Common = []Sequence{
 	{
 		Name:        "PG Lock",
 		Description: "Lock pg",
+		DropTables:  []string{"for_test"},
 		Calls: []call.Step{
-			call.Setup("drop table if exists for_test"),
 			call.Setup(`CREATE TABLE for_test (
     id INTEGER NOT NULL PRIMARY KEY,
     created_at TIMESTAMP DEFAULT NOW()
@@ -158,8 +156,8 @@ var Common = []Sequence{
 	{
 		Name:        "Insert isolation level",
 		Description: "Shows default isolation level and how it affects received data",
+		DropTables:  []string{"exec_test"},
 		Calls: []call.Step{
-			call.Setup("drop table if exists exec_test"),
 			call.Setup("CREATE TABLE exec_test (id SERIAL PRIMARY KEY, name TEXT)"),
 			call.Begin(tx1),
 			call.Begin(tx2),

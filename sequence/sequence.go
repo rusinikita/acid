@@ -7,4 +7,5 @@ type Sequence struct {
 	Description   string
 	Calls         []call.Step
 	LearningLinks []string
+	DropTables    []string
 }
