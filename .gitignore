@@ -28,3 +28,4 @@ go.work.sum
 # IDE
 .idea
 .claude/worktrees
+dist
