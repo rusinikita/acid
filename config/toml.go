@@ -21,6 +21,7 @@ type file struct {
 	Name          string     `toml:"name"`
 	Description   string     `toml:"description"`
 	LearningLinks []string   `toml:"learning_links"`
+	DropTables    []string   `toml:"drop_tables"`
 	Steps         []fileStep `toml:"steps"`
 }
 
@@ -43,6 +44,7 @@ func Load(path string) (sequence.Sequence, error) {
 		Name:          f.Name,
 		Description:   f.Description,
 		LearningLinks: f.LearningLinks,
+		DropTables:    f.DropTables,
 		Calls:         steps,
 	}, nil
 }

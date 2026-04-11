@@ -20,12 +20,12 @@ var DefaultKB = KeyBindings{
 	),
 	Mode: key.NewBinding(
 		key.WithKeys("m", tea.KeySpace.String()),
-		key.WithHelp("m/space", "view mode"),
+		key.WithHelp("m/space", "toggle results visibility"),
 	),
 	Learn: key.NewBinding(),
 	ShowSetup: key.NewBinding(
 		key.WithKeys("s"),
-		key.WithHelp("s", "setup sql"),
+		key.WithHelp("s", "toggle setup sql visibility"),
 	),
 }
 

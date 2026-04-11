@@ -10,9 +10,7 @@ learning_links = [
   "https://en.wikipedia.org/wiki/Isolation_(database_systems)#Dirty_reads",
 ]
 
-[[steps]]
-sql   = "drop table if exists orders"
-setup = true
+drop_tables = ["orders"]
 
 [[steps]]
 sql   = "create table orders (id serial primary key, customer text not null, amount integer not null)"

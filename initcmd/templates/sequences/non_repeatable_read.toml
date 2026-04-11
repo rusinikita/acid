@@ -10,9 +10,7 @@ learning_links = [
   "https://en.wikipedia.org/wiki/Isolation_(database_systems)#Non-repeatable_reads",
 ]
 
-[[steps]]
-sql   = "drop table if exists prices"
-setup = true
+drop_tables = ["prices"]
 
 [[steps]]
 sql   = "create table prices (id integer primary key, product text not null, price integer not null)"

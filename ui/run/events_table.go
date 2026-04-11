@@ -185,6 +185,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.data.clean()
 			if m.serverMode {
 				m.data.onlyStepsMode = true
+				m.data.showSetupEvents = true
 			}
 			m.running = true
 			m.UpdateViewport()

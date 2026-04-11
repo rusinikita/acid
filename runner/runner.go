@@ -31,6 +31,15 @@ func (r *Runner) Run(sequence sequence.Sequence) <-chan event.Event {
 	go func() {
 		r.store.ResetAll()
 
+		for _, table := range sequence.DropTables {
+			step := call.Setup("DROP TABLE IF EXISTS " + table)
+			result := step.Exec(r.store, nil)
+			if result.Error != nil {
+				results <- event.Call(step, nil)
+				results <- event.Result(step, result, nil)
+			}
+		}
+
 		wg := sync.WaitGroup{}
 
 		for i, step := range sequence.Calls {
