@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -17,6 +18,25 @@ import (
 func LoadEnv(baseDir string) {
 	_ = godotenv.Load(filepath.Join(baseDir, ".env"))
 	_ = godotenv.Load(filepath.Join(filepath.Dir(baseDir), ".env"))
+}
+
+// TryConnect attempts to open and ping the database, returning an error on failure.
+func TryConnect() error {
+	_ = godotenv.Load(".env")
+	_ = godotenv.Load("../.env")
+	_ = godotenv.Load("../../.env")
+
+	database, err := sql.Open(os.Getenv("DB_DRIVER"), os.Getenv("DB_CONNECT"))
+	if err != nil {
+		return fmt.Errorf("open: %w", err)
+	}
+	defer database.Close()
+
+	if err := database.Ping(); err != nil {
+		return fmt.Errorf("ping: %w", err)
+	}
+
+	return nil
 }
 
 func Connect() *sql.DB {
