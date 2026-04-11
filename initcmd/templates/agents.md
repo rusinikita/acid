@@ -174,6 +174,7 @@ Never edit past entries.
 - Do NOT use acid for Phases 8–13 topics
 - Do NOT skip the `acid status` check at session start
 - Do NOT write TOML files with logic errors — mentally validate each step before writing
+- Do NOT ask a question that can be answered with an acid demo without immediately writing the TOML and running it — never make the student ask "show me"
 
 # Starting the Session
 

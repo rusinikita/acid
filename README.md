@@ -8,76 +8,94 @@
 
 [![Telegram](https://img.shields.io/badge/Telegram-@nikitarusin-blue?logo=telegram&logoColor=white)](https://t.me/nikitarusin)
 
-A terminal-based visualization tool for testing SQL transaction sequences.
+A CLI tool to bootstrap and enhance LLM agent-driven database learning. A TUI visualizes multi-transaction scenarios executed on real databases, letting you observe transaction anomalies and gotchas firsthand.
 
 ## Table of Contents
 - [Why ACID?](#why-acid)
 - [Demo](#demo)
 - [Features](#features)
-- [Quick Start](#quick-start-5-steps-2-minutes)
+- [AI-guided learning](#ai-guided-learning)
+- [Quick Start](#quick-start)
 - [Controls](#controls)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Why ACID?
 
-Testing complex transaction scenarios usually requires:
-- Opening multiple terminal windows
-- Manually copying and pasting SQL commands in precise order  
-- Coordinating timing between different sessions
-- Managing database connections and states
+**1. Zero to hero — deep understanding of database behavior**
 
-**ACID eliminates this complexity** by letting you define entire scenarios in simple Go code and watch them run automatically with visual feedback.
+Start from scratch and build real intuition for how databases handle concurrency. An AI coach walks you through each anomaly — dirty reads, lost updates, phantom reads, deadlocks — with live scenarios on a real database, not toy diagrams.
 
-Instead of juggling terminals, you get:
-- **Automated execution** - No manual copy-paste between terminals
-- **Real-time visualization** - Watch scenarios execute with live updates
-- **Visual locks indicator** - See exactly when transactions are waiting
-- **Quiz mode** - Hide results to test your understanding
+> *"I'm new to databases. Teach me ACID properties and transaction isolation from the ground up."*
 
-Perfect for learning transaction behavior, debugging concurrency issues, and teaching database concepts. 
+**2. Interview prep and topic revision**
 
-Get answers to your questions:
-> - Do I lose data when another request happens at the same time?
-> - What results do I get from a `SELECT` while another transaction is updating?
-> - What happens with `SELECT COUNT(*) FROM table FOR UPDATE`?
+Quickly revisit specific concepts before a system design interview or when a topic feels fuzzy. Predict outcomes, get corrected, understand why — the prediction-first loop makes knowledge stick.
+
+> *"I have a system design interview tomorrow. Run me through isolation levels and the most common concurrency gotchas."*
+
+**3. Testing database behavior during feature design**
+
+Unsure how your database will behave under concurrent writes? Write a scenario for your exact table structure and query pattern, run it, and see the real result before committing to an approach.
+
+> *"I'm designing a booking system. Show me what happens when two users claim the last seat at the same time."*
 
 ## Demo
 
-[![asciicast](https://asciinema.org/a/738395.svg)](https://asciinema.org/a/738395)
+[![](docs/demo.gif)](https://www.youtube.com/watch?v=8rke6HYa0SQ)
 ☝️ click to open app demo video
-
-👇 [Ru lang] Click to watch ACID in action - BigTech SQL essentials video
-[![Watch the video with BigTech SQL essentials](https://img.youtube.com/vi/KMx5b7zIi0w/0.jpg)](https://youtu.be/KMx5b7zIi0w)
 
 ## Features
 
-### Simple DSL for complex tests
+### Simple TOML scenarios
 
-```go
-// Test isolation levels with concurrent transactions
-call.Setup("DROP TABLE IF EXISTS users"),
-call.Setup("CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT, balance INTEGER)"),
-call.Setup("INSERT INTO users (name, balance) VALUES ('Alice', 1000), ('Bob', 500)"),
+```toml
+name = "Lost Update"
+description = "Two transactions read and write the same row — only one update survives"
+drop_tables = ["accounts"]
 
-call.Begin(tx1), // Transaction 1: Transfer money  
-call.Begin(tx2), // Transaction 2: Check balances
+[[steps]]
+sql = "CREATE TABLE accounts (id INT PRIMARY KEY, owner TEXT, balance INT)"
+setup = true
 
-call.Call("UPDATE users SET balance = balance - 100 WHERE name = 'Alice'", tx1),
-call.Call("SELECT balance FROM users WHERE name = 'Alice'", tx2), // What balance is shown?
-call.Commit(tx1),
-call.Call("SELECT balance FROM users WHERE name = 'Alice'", tx2), // What about now?
-call.Commit(tx2),
+[[steps]]
+cmd = "begin"
+trx = "alice"
+
+[[steps]]
+cmd = "begin"
+trx = "bob"
+
+[[steps]]
+sql = "SELECT balance FROM accounts WHERE id = 1"
+trx = "alice"
+
+[[steps]]
+sql = "SELECT balance FROM accounts WHERE id = 1"
+trx = "bob"
+
+[[steps]]
+sql = "UPDATE accounts SET balance = balance - 100 WHERE id = 1"
+trx = "alice"
+
+[[steps]]
+sql = "UPDATE accounts SET balance = balance - 100 WHERE id = 1"
+trx = "bob"
+
+[[steps]]
+cmd = "commit"
+trx = "alice"
+
+[[steps]]
+cmd = "commit"
+trx = "bob"
 ```
 
-Easily create runnable sequences:
-- `Setup` for initialization SQL (hidden by default)
-  - Press the `s` button to see initialization code call result
-- `Begin`, `Commit`, `Rollback` parallel transactions
-  - Argument: txID to start or finish
-- `Call` SQL request
-  - Second argument: txID to run SQL inside. If no txID is provided, runs as a single query transaction (begin → SQL call → commit) 
-
+Sequence building blocks:
+- `setup = true` — initialization SQL, hidden by default (press `s` to show)
+- `cmd = "begin" / "commit" / "rollback"` with a `trx` label — transaction lifecycle
+- `sql = "..."` with a `trx` label — runs inside that transaction
+- `sql = "..."` with no `trx` — auto-committed single-statement query
 
 ### Quiz mode
 
@@ -87,7 +105,7 @@ SQL sequences run with hidden responses, allowing you to test your understanding
 
 Press `m` or `space` to show responses.
 
-### Locks visualisation
+### Locks visualization
 
 Every request runs concurrently, with the UI showing when transactions wait for resource access.
 
@@ -97,81 +115,93 @@ Every request runs concurrently, with the UI showing when transactions wait for 
 
 Explore predefined sequences for common transaction scenarios.
 
-## Quick Start (5 steps, ~2 minutes)
+## AI-guided learning
 
-#### Prerequisites
+The primary workflow pairs `acid serve` with an LLM agent (Claude, Gemini, or any agent that reads `AGENTS.md`) acting as a Socratic database coach.
 
-> **⚠️ Requirements**
->
-> This tool requires a running PostgreSQL or MySQL database
-
-- Go 1.23+ to run program
-- Docker and Docker Compose (for local databases run command)
-- OR access to PostgreSQL/MySQL database
-
-#### 1 - Clone project
-
-```shell
-git clone https://github.com/rusinikita/acid.git
+```
+Terminal 1                         Terminal 2
+──────────────────────────────     ──────────────────────────────
+make serve                         claude
+  │                                  │
+  │  acid serve starts on :7331      │  Agent reads AGENTS.md / CLAUDE.md
+  │  Results hidden by default       │
+  │                                  │  acid status          ← checks DB + server
+  │  ┌─────────────────────┐         │  acid run -f sequences/lost_update.toml
+  │  │ scenario plays out  │◄────────┤
+  │  │ results are hidden  │         │  "What will the final balance be?"
+  │  └─────────────────────┘         │
+  │                                  │  [student answers]
+  │  ┌─────────────────────┐         │
+  │  │ results revealed    │◄────────┤  acid toggle
+  │  └─────────────────────┘         │
+  │                                  │  Debrief → next scenario
 ```
 
-#### 2 - Start database
+The agent writes new `.toml` files in `sequences/`, runs them with `acid run`, waits for your prediction, then calls `acid toggle` to reveal the results. `acid init` scaffolds the full environment including a pre-loaded coaching prompt in `AGENTS.md`/`CLAUDE.md`.
 
-Run PostgreSQL and MySQL in Docker
-
-```shell
-make rundbs
+**Agent commands:**
+```bash
+acid status                              # verify DB connectivity and server health
+acid run -f sequences/lost_update.toml  # stream scenario to the serve TUI
+acid toggle                              # reveal results after student predicts
 ```
 
-Or
-```shell
-docker compose up -d
+You can also run built-in sequences by name:
+```bash
+acid run "Lost Update"
+acid run "Dirty Read"
+acid run "Phantom Reads"
 ```
 
-Alternatively, you can create a cloud database in 3 minutes:
-- [neon.com](https://neon.com) for postgres
-- [planetscale.com](https://planetscale.com/) for mysql
+## Quick Start
 
-#### 3 - Setup database link
+#### 1 - Install
 
-Create `.env` file from `.env.example` content
+```bash
+# macOS (Homebrew)
+brew install --cask rusinikita/acid/acid
 
-```shell
-cp .env.example .env
+# Linux / macOS (shell script)
+curl -fsSL https://raw.githubusercontent.com/rusinikita/acid/main/install.sh | sh
 ```
 
-By default .env.example file is ready to connect to Postgresql in docker
+#### 2 - Scaffold a learning environment
 
-You can edit the .env content:
-- If you want to test MySQL-specific cases in Docker Compose - simply uncomment the MySQL section and comment out the PostgreSQL section 
-- Or edit environment variables for another database link
-
-```dotenv
-# postgresql
-# DB_DRIVER=postgres
-# DB_CONNECT="host=localhost port=5432 user=acid password=strong_password_123 dbname=demo sslmode=disable"
-# mysql
-DB_DRIVER=mysql
-DB_CONNECT="acid:strong_password_123@tcp(127.0.0.1:3306)/demo"
+```bash
+acid init my-learning
+cd my-learning
 ```
 
-#### 4 - Run app
+This creates `.env`, `AGENTS.md`/`CLAUDE.md` (AI coaching prompt), `learning_plan.md`, a `sequences/` folder with example TOML files, and a `Makefile`.
 
-```shell
-make run
+#### 3 - Start a database
+
+init command creates docker-compose.yml and Makefile for convenience.
+
+```bash
+make pg       # PostgreSQL in Docker (matches .env default)
+# or
+make mysql    # MySQL in Docker
 ```
 
-Or
+Or edit `.env` to point at an existing cloud database ([neon.com](https://neon.com) for PostgreSQL, [planetscale.com](https://planetscale.com/) for MySQL).
 
-```shell
-go run main.go
+#### 4 - Open two terminal panes and start learning
+
+```
+FIRST    make serve     # starts acid serve on :7331
+SECOND   claude         # or: gemini, or any LLM agent
 ```
 
-#### 5 - Have fun!
+Say **"Let's start"** — the agent verifies the server is up, then kicks off the first scenario.
 
-Use arrow keys to select a sequence and press Enter to run it.
+#### Run scenarios manually at any time
 
-Edit queries or create your own sequences in [sequence/sequences.go](sequence/sequences.go) file.
+```bash
+acid run -f sequences/lost_update.toml
+acid toggle    # reveal results
+```
 
 ## Supported Databases
 
@@ -193,11 +223,10 @@ Edit queries or create your own sequences in [sequence/sequences.go](sequence/se
 We welcome contributions! Here's how you can help:
 
 1. **Report Issues** - Found a bug or have a feature request? [Create an issue](https://github.com/rusinikita/acid/issues)
-2. **Share Sequences** - Create interesting transaction scenarios in `sequence/sequences.go` 
+2. **Share Sequences** - Create interesting transaction scenarios as TOML files
 3. **Improve Documentation** - Help make the README clearer
 4. **Code Contributions** - Submit pull requests for bug fixes or features
 
 ## License
 
 GPL-3.0 License - see [LICENSE](LICENSE) file for details.
-
