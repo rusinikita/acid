@@ -183,6 +183,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case newEvent:
 		if msg.Event.IsStart() {
 			m.data.clean()
+			if m.serverMode {
+				m.data.onlyStepsMode = true
+			}
 			m.running = true
 			m.UpdateViewport()
 			return m, readNextEvent(m.runner)

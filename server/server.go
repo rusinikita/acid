@@ -71,6 +71,9 @@ func (s *Server) ListenAndServe() error {
 		w.WriteHeader(http.StatusOK)
 	})
 	mux.HandleFunc("POST /start", func(w http.ResponseWriter, r *http.Request) {
+		s.mu.Lock()
+		s.visible = false
+		s.mu.Unlock()
 		s.ch <- event.Start()
 		w.WriteHeader(http.StatusOK)
 	})
