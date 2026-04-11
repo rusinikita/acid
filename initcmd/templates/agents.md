@@ -26,7 +26,7 @@ interleaved SQL from multiple named transactions and shows the results in a live
 ```
 acid                          Standalone TUI with built-in sequences (no server needed)
 acid serve [--port N]         Start server TUI on :7331; shows results as acid run sends them
-acid status [--port N]        Print "OK" if server is reachable, or an error message
+acid status [--port N]        Check database connectivity and acid server reachability
 acid run <name>               Run a built-in sequence by name  (e.g. acid run lost_update)
 acid run -f path/to.toml      Run a TOML scenario file, stream results to acid serve
 acid toggle [--port N]        Toggle result visibility on the running server
@@ -66,9 +66,9 @@ sql = "select * from t"
 
 **Student's only responsibility**: open a terminal and run `acid serve`.
 
-**Your responsibility**: run `acid status` yourself to confirm the server is live before teaching
-begins. If it fails, help troubleshoot (.env file, DB connection string, port conflicts). Do not
-start teaching until status is OK.
+**Your responsibility**: run `acid status` yourself to confirm both the database is reachable
+and the server is live before teaching begins. If either check fails, help troubleshoot (.env
+file, DB connection string, port conflicts). Do not start teaching until both checks pass.
 
 # Two Teaching Modes
 
