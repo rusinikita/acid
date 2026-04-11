@@ -31,15 +31,24 @@ func Run(args []string) {
 	var created []string
 
 	flat := map[string]string{
-		".env":      "templates/env.example",
-		"agents.md": "templates/agents.md",
-		"learning_plan.md": "templates/learning_plan.md",
+		".env":               "templates/env.example",
+		"AGENTS.md":          "templates/agents.md",
+		"learning_plan.md":   "templates/learning_plan.md",
+		"docker-compose.yml": "templates/docker-compose.yml",
+		"Makefile":           "templates/Makefile",
 	}
 	for dest, src := range flat {
 		data, _ := templates.ReadFile(src)
 		full := filepath.Join(targetDir, dest)
 		if writeNew(full, data) {
 			created = append(created, dest)
+		}
+	}
+
+	for _, link := range []string{"CLAUDE.md", "GEMINI.md"} {
+		dest := filepath.Join(targetDir, link)
+		if symlinkNew(dest, "AGENTS.md") {
+			created = append(created, link+" -> AGENTS.md")
 		}
 	}
 
@@ -74,6 +83,20 @@ func writeNew(path string, content []byte) bool {
 	return true
 }
 
+// symlinkNew creates a symlink at link pointing to target only if link does not exist.
+// Returns true if the symlink was created.
+func symlinkNew(link, target string) bool {
+	if _, err := os.Lstat(link); err == nil {
+		fmt.Printf("  skip (exists)  %s\n", link)
+		return false
+	}
+	if err := os.Symlink(target, link); err != nil {
+		fmt.Fprintf(os.Stderr, "init: symlink %s: %v\n", link, err)
+		os.Exit(1)
+	}
+	return true
+}
+
 func printSummary(dir string, created []string) {
 	fmt.Printf("\nScaffolded learning environment in: %s\n\n", dir)
 	fmt.Println("Created:")
@@ -87,15 +110,20 @@ func printSummary(dir string, created []string) {
 		fmt.Printf("  %d. cd %s\n", step, dir)
 		step++
 	}
-	fmt.Printf("  %d. Edit .env with your database connection details\n", step)
+	fmt.Printf("  %d. Start a database:  make pg   (PostgreSQL) or  make mysql\n", step)
+	step++
+	fmt.Printf("  %d. Edit .env if you're using a custom database connection\n", step)
 	step++
 	fmt.Printf("  %d. Open two terminal panes:\n", step)
-	fmt.Println("       FIRST    acid serve")
-	fmt.Println("       SECOND   claude --system-prompt agents.md")
+	fmt.Println("       FIRST    make serve")
+	fmt.Println("       SECOND   claude")
 	step++
 	fmt.Printf("  %d. Say \"Let's start\" — the AI agent will guide you\n", step)
 	step++
 	fmt.Printf("  %d. Run scenarios manually at any time:\n", step)
 	fmt.Println("       acid run -f sequences/lost_update.toml")
+	step++
+	fmt.Printf("  %d. Keep acid up to date:\n", step)
+	fmt.Println("       make update")
 	fmt.Println()
 }

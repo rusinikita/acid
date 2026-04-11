@@ -35,8 +35,8 @@ release:
   github:
     owner: rusinikita
     name: acid
-  draft: true
-  prerelease: true
+  draft: false
+  prerelease: false
 
 homebrew_casks:
   - name: acid

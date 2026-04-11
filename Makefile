@@ -8,6 +8,11 @@ init:
 		echo ".env file created."; \
 	fi
 
+ifneq (,$(wildcard ./.env))
+    include .env
+    export
+endif
+
 # Run database in docker container
 rundbs:
 	docker-compose up -d
