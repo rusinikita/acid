@@ -11,6 +11,7 @@ import (
 	"github.com/rusinikita/acid/call"
 	"github.com/rusinikita/acid/event"
 	"github.com/rusinikita/acid/sequence"
+	"github.com/rusinikita/acid/terminal"
 	"github.com/rusinikita/acid/ui/router"
 	"github.com/rusinikita/acid/ui/theme"
 )
@@ -29,6 +30,7 @@ type model struct {
 
 	help help.Model
 
+	splitHint       string
 	db              string
 	currentSequence int
 	sequences       []sequence.Sequence
@@ -86,8 +88,9 @@ func NewServerRunTable(source runner, port string, toggleCh <-chan struct{}) tea
 		table: t,
 		data:  data,
 
-		help: help.New(),
-		db:   ":" + port,
+		help:      help.New(),
+		splitHint: terminal.SplitHint(),
+		db:        ":" + port,
 	}
 
 	styleFunc := func(row, _ int) lipgloss.Style {
@@ -224,7 +227,17 @@ func (m *model) bordersHeight() int {
 
 func (m *model) View() string {
 	if m.serverMode && len(m.data.events) == 0 {
-		return "Waiting for connection on " + m.db + "...\n\nPress q to quit."
+		label := theme.SQLKeywordStyle.Render
+		dim := theme.EventTypeStyle.Render
+		return fmt.Sprintf(
+			"\n  %s  %s\n\n  %s  %s\n\n  %s  %s  %s  %s\n\n  %s\n\n  %s",
+			label("acid server"), dim("listening on "+m.db),
+			dim("Waiting for agent to connect..."),
+			"",
+			label("1."), "Split this pane:", dim(m.splitHint), "",
+			label("2.")+" In the new pane run:  "+dim("claude")+"  /  "+dim("codex")+"  /  "+dim("gemini")+"    (you can resize the divider)",
+			dim("Press q to quit"),
+		)
 	}
 
 	menuBindings := theme.DefaultKB.Menu()
